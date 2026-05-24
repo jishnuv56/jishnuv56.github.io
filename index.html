@@ -538,6 +538,17 @@ select option{background:#111318;}
 .tbd-link-input-row input:focus{border-color:var(--accent);}
 .tbd-link-label{width:110px;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--text);font-family:var(--sans);font-size:12px;outline:none;}
 .tbd-link-label:focus{border-color:var(--accent);}
+.tbd-grade-btn.active[data-grade="A"]{background:rgba(34,197,94,.15);color:var(--result-win);border-color:var(--result-win);}
+.tbd-grade-btn.active[data-grade="B"]{background:rgba(246,201,14,.15);color:#f6c90e;border-color:#f6c90e;}
+.tbd-grade-btn.active[data-grade="C"]{background:rgba(239,68,68,.15);color:var(--result-loss);border-color:var(--result-loss);}
+.tbd-grade-tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;font-family:var(--mono);}
+.tbd-grade-tag.A{background:rgba(34,197,94,.13);color:var(--result-win);}
+.tbd-grade-tag.B{background:rgba(246,201,14,.13);color:#f6c90e;}
+.tbd-grade-tag.C{background:rgba(239,68,68,.13);color:var(--result-loss);}
+.tbd-setup-tag{background:rgba(167,139,250,.1);color:var(--payout);padding:2px 8px;border-radius:4px;font-size:10px;font-family:var(--mono);}
+.tbd-dir-tag{padding:2px 7px;border-radius:4px;font-size:10px;font-family:var(--mono);font-weight:700;}
+.tbd-dir-tag.LONG{background:rgba(0,148,255,.12);color:var(--accent2);}
+.tbd-dir-tag.SHORT{background:rgba(167,139,250,.12);color:var(--payout);}
 .tbd-empty{text-align:center;padding:56px 20px;color:var(--text3);}
 .tbd-empty .icon{font-size:36px;margin-bottom:10px;}
 .tbd-empty h3{font-size:14px;color:var(--text2);margin-bottom:5px;}
@@ -1178,6 +1189,37 @@ select option{background:#111318;}
               <option>Overnight</option>
             </select>
           </div>
+          <div>
+            <label style="display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:5px;">Setup Type</label>
+            <input type="text" id="tbd-setup" placeholder="e.g. ICT CISD, BOS Retest…" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:9px 10px;color:var(--text);font-family:var(--sans);font-size:12px;outline:none;">
+          </div>
+        </div>
+
+        <div class="form-row" style="margin-bottom:12px;">
+          <div>
+            <label style="display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:6px;">Result</label>
+            <div class="result-toggle" id="tbd-result-toggle">
+              <button class="result-btn W active" onclick="setTbdResult(this,'W')">W</button>
+              <button class="result-btn BE" onclick="setTbdResult(this,'BE')">BE</button>
+              <button class="result-btn L" onclick="setTbdResult(this,'L')">L</button>
+            </div>
+          </div>
+          <div>
+            <label style="display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:6px;">Direction</label>
+            <div class="direction-toggle" style="margin-bottom:0;">
+              <button class="dir-btn LONG active" id="tbd-dir-long" onclick="setTbdDir(this,'LONG')">▲ LONG</button>
+              <button class="dir-btn SHORT" id="tbd-dir-short" onclick="setTbdDir(this,'SHORT')">▼ SHORT</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <label style="display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:6px;">Grade</label>
+          <div style="display:flex;gap:8px;">
+            <button class="tbd-grade-btn active" data-grade="A" onclick="setTbdGrade(this)" style="flex:1;padding:8px;border:1px solid var(--border2);border-radius:6px;background:transparent;color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);transition:all .2s;">A — Perfect</button>
+            <button class="tbd-grade-btn" data-grade="B" onclick="setTbdGrade(this)" style="flex:1;padding:8px;border:1px solid var(--border2);border-radius:6px;background:transparent;color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);transition:all .2s;">B — Good</button>
+            <button class="tbd-grade-btn" data-grade="C" onclick="setTbdGrade(this)" style="flex:1;padding:8px;border:1px solid var(--border2);border-radius:6px;background:transparent;color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--sans);transition:all .2s;">C — Poor</button>
+          </div>
         </div>
 
         <!-- Chart links -->
@@ -1197,6 +1239,16 @@ select option{background:#111318;}
           <button class="btn-save" style="margin:0;" onclick="saveTbd()">💾 Save Breakdown</button>
           <button class="btn-edit" style="margin:0;flex:0 0 auto;width:auto;padding:8px 16px;" onclick="closeTbdForm()">Cancel</button>
         </div>
+      </div>
+
+      <!-- Filter row -->
+      <div class="filters" id="tbd-filters" style="margin-bottom:16px;">
+        <button class="filter-btn active" onclick="setTbdFilter('all',this)">All</button>
+        <button class="filter-btn" onclick="setTbdFilter('W',this)">✅ Wins</button>
+        <button class="filter-btn" onclick="setTbdFilter('L',this)">❌ Losses</button>
+        <button class="filter-btn" onclick="setTbdFilter('A',this)">🏆 Grade A</button>
+        <button class="filter-btn" onclick="setTbdFilter('B',this)">🥈 Grade B</button>
+        <button class="filter-btn" onclick="setTbdFilter('C',this)">📚 Grade C</button>
       </div>
 
       <!-- Cards list -->
@@ -1705,6 +1757,31 @@ function renderSession(){
 }
 
 // ── TRADE BREAKDOWNS ──────────────────────────────────────
+let tbdFilter='all';
+
+function setTbdFilter(val,btn){
+  tbdFilter=val;
+  document.querySelectorAll('#tbd-filters .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTbd();
+}
+
+function setTbdResult(btn,val){
+  document.querySelectorAll('#tbd-result-toggle .result-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function setTbdDir(btn,val){
+  document.getElementById('tbd-dir-long').classList.remove('active');
+  document.getElementById('tbd-dir-short').classList.remove('active');
+  btn.classList.add('active');
+}
+
+function setTbdGrade(btn){
+  document.querySelectorAll('.tbd-grade-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
 function openTbdForm(id){
   editingTbdId=id||null;
   tbdLinks=[];
@@ -1717,16 +1794,34 @@ function openTbdForm(id){
     document.getElementById('tbd-date').value=b.date||today;
     document.getElementById('tbd-asset').value=b.asset||'';
     document.getElementById('tbd-session').value=b.session||'';
+    document.getElementById('tbd-setup').value=b.setup||'';
     document.getElementById('tbd-notes').value=b.notes||'';
     tbdLinks=b.links?[...b.links]:[];
     titleEl.textContent='✏ Edit Breakdown';
+    // Restore result
+    document.querySelectorAll('#tbd-result-toggle .result-btn').forEach(btn=>{
+      btn.classList.toggle('active', btn.classList.contains(b.result||'W'));
+    });
+    // Restore direction
+    document.getElementById('tbd-dir-long').classList.toggle('active',(b.direction||'LONG')==='LONG');
+    document.getElementById('tbd-dir-short').classList.toggle('active',b.direction==='SHORT');
+    // Restore grade
+    document.querySelectorAll('.tbd-grade-btn').forEach(btn=>{
+      btn.classList.toggle('active',btn.dataset.grade===(b.grade||'A'));
+    });
   }else{
     document.getElementById('tbd-date').value=today;
     document.getElementById('tbd-asset').value='';
     document.getElementById('tbd-session').value='';
+    document.getElementById('tbd-setup').value='';
     document.getElementById('tbd-notes').value='';
     tbdLinks=[];
     titleEl.textContent='＋ New Breakdown';
+    // Reset to defaults
+    document.querySelectorAll('#tbd-result-toggle .result-btn').forEach(b=>b.classList.toggle('active',b.classList.contains('W')));
+    document.getElementById('tbd-dir-long').classList.add('active');
+    document.getElementById('tbd-dir-short').classList.remove('active');
+    document.querySelectorAll('.tbd-grade-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
   }
   renderTbdLinks();
   wrap.style.display='block';
@@ -1770,13 +1865,19 @@ async function saveTbd(){
   const date=document.getElementById('tbd-date').value;
   const asset=document.getElementById('tbd-asset').value.trim().toUpperCase();
   const session=document.getElementById('tbd-session').value;
+  const setup=document.getElementById('tbd-setup').value.trim();
   const notes=document.getElementById('tbd-notes').value.trim();
   if(!asset){showToast('Enter an asset name','error');return;}
   if(!date){showToast('Select a date','error');return;}
+  const resultBtn=document.querySelector('#tbd-result-toggle .result-btn.active');
+  const result=resultBtn?.classList.contains('W')?'W':resultBtn?.classList.contains('BE')?'BE':'L';
+  const direction=document.getElementById('tbd-dir-long').classList.contains('active')?'LONG':'SHORT';
+  const gradeBtn=document.querySelector('.tbd-grade-btn.active');
+  const grade=gradeBtn?.dataset.grade||'A';
   const validLinks=tbdLinks.filter(l=>l.url.trim());
   const entry={
     id:editingTbdId||uid(),
-    date,asset,session,notes,
+    date,asset,session,setup,result,direction,grade,notes,
     links:validLinks,
     createdAt:editingTbdId?(tradeBreakdowns.find(b=>b.id===editingTbdId)?.createdAt||new Date().toISOString()):new Date().toISOString(),
     updatedAt:new Date().toISOString()
@@ -1804,18 +1905,31 @@ async function deleteTbd(id){
 function renderTbd(){
   const el=document.getElementById('tbd-list');
   if(!el)return;
-  const filtered=tradeBreakdowns;
+  let filtered=tradeBreakdowns;
+  if(tbdFilter==='W') filtered=filtered.filter(b=>b.result==='W');
+  else if(tbdFilter==='L') filtered=filtered.filter(b=>b.result==='L');
+  else if(tbdFilter==='A') filtered=filtered.filter(b=>b.grade==='A');
+  else if(tbdFilter==='B') filtered=filtered.filter(b=>b.grade==='B');
+  else if(tbdFilter==='C') filtered=filtered.filter(b=>b.grade==='C');
   if(!filtered.length){
-    el.innerHTML=`<div class="tbd-empty"><div class="icon">🔍</div><h3>No breakdowns yet</h3><p>Click <strong>Add Breakdown</strong> to log your first trade analysis with chart links.</p></div>`;
+    el.innerHTML=`<div class="tbd-empty"><div class="icon">🔍</div><h3>${tbdFilter==='all'?'No breakdowns yet':'No breakdowns match filter'}</h3><p>${tbdFilter==='all'?'Click <strong>Add Breakdown</strong> to log your first trade analysis with chart links.':'Try a different filter above.'}</p></div>`;
     return;
   }
   el.innerHTML=filtered.map(b=>{
     const links=b.links||[];
-    return`<div class="tbd-card">
+    const result=b.result||'W';
+    const direction=b.direction||'';
+    const grade=b.grade||'';
+    const setup=b.setup||'';
+    return`<div class="tbd-card ${result==='L'?'loss':result==='BE'?'be':''}">
       <div class="tbd-card-top">
         <div class="tbd-asset">${esc(b.asset)}</div>
+        <span class="tbd-result-tag ${result}">${result==='W'?'WIN':result==='BE'?'BE':'LOSS'}</span>
+        ${direction?`<span class="tbd-dir-tag ${direction}">${direction==='LONG'?'▲':'▼'} ${direction}</span>`:''}
+        ${grade?`<span class="tbd-grade-tag ${grade}">Grade ${grade}</span>`:''}
         <div class="tbd-date">📅 ${fmtDate(b.date)}</div>
         ${b.session?`<span class="tbd-session-tag">🕐 ${esc(b.session)}</span>`:''}
+        ${setup?`<span class="tbd-setup-tag">⚡ ${esc(setup)}</span>`:''}
         <div class="tbd-actions">
           <button class="exp-btn-del" onclick="openTbdForm('${b.id}')" title="Edit">✏</button>
           <button class="exp-btn-del" onclick="deleteTbd('${b.id}')" title="Delete">🗑</button>
@@ -2212,6 +2326,16 @@ function showForm(trade,mode){
         <input type="number" id="${isEval?'ef':'f'}-rr" placeholder="2.5" step="0.1" min="0" value="${t.rr||''}">
       </div>
     </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Daily Drawdown Left ($)</label>
+        <input type="number" id="${isEval?'ef':'f'}-dd-daily" placeholder="e.g. 1200.00" step="0.01" min="0" value="${t.ddDaily||''}">
+      </div>
+      <div class="form-group">
+        <label>Max Drawdown Left ($)</label>
+        <input type="number" id="${isEval?'ef':'f'}-dd-max" placeholder="e.g. 3500.00" step="0.01" min="0" value="${t.ddMax||''}">
+      </div>
+    </div>
 
     <div class="form-group">
       <label style="display:flex;align-items:center;justify-content:space-between;">
@@ -2401,6 +2525,8 @@ async function saveTrade(mode){
   const direction=dirBtn?.classList.contains('LONG')?'LONG':'SHORT';
   const pnl=document.getElementById(`${p}-pnl`).value;
   const rr=document.getElementById(`${p}-rr`).value;
+  const ddDaily=document.getElementById(`${p}-dd-daily`)?.value||'';
+  const ddMax=document.getElementById(`${p}-dd-max`)?.value||'';
   const chartLinks=getChartLinks(mode);
   const chartLink=chartLinks[0]?.url||''; // keep for backwards compat
   const notes=document.getElementById(`${p}-notes`).value.trim();
@@ -2429,7 +2555,7 @@ async function saveTrade(mode){
   const session=getActiveSession(mode);
   const marketTiming=getActiveTiming(mode);
   const checklist=getCheckedItems(mode);
-  const trade={id:eId||uid(),date,asset,result,direction,session,marketTiming,checklist,pnl:String(basePnl),copies,totalPnl,accountRows,account,rr:rr||'',chartLink,chartLinks,notes,updatedAt:new Date().toISOString()};
+  const trade={id:eId||uid(),date,asset,result,direction,session,marketTiming,checklist,pnl:String(basePnl),copies,totalPnl,accountRows,account,rr:rr||'',ddDaily:ddDaily||'',ddMax:ddMax||'',chartLink,chartLinks,notes,updatedAt:new Date().toISOString()};
   if(isEval){
     if(editingEvalId){const idx=evalTrades.findIndex(t=>t.id===editingEvalId);if(idx!==-1)evalTrades[idx]=trade;}
     else evalTrades.unshift(trade);
@@ -2502,6 +2628,15 @@ function showDetail(id,mode){
       <div class="detail-item"><div class="detail-item-label">PnL / Account</div><div class="detail-item-val" style="color:${basePnl>=0?'var(--win)':'var(--loss)'}">${fmtPnl(basePnl)}</div></div>
       <div class="detail-item"><div class="detail-item-label">RR Ratio</div><div class="detail-item-val">${t.rr?t.rr+'R':'—'}</div></div>
       <div class="detail-item" style="grid-column:span 2;"><div class="detail-item-label">Total PnL</div><div class="detail-item-val" style="font-size:18px;color:${totalPnl>=0?'var(--win)':'var(--loss)'}">${fmtPnl(totalPnl)}</div></div>
+      ${(t.ddDaily||t.ddMax)?`
+      <div class="detail-item" style="${!t.ddDaily?'display:none':''}">
+        <div class="detail-item-label">Daily DD Left</div>
+        <div class="detail-item-val" style="color:${parseFloat(t.ddDaily)<200?'var(--loss)':parseFloat(t.ddDaily)<500?'#f6c90e':'var(--text)'}">${t.ddDaily?fmtMoney(parseFloat(t.ddDaily)):'—'}</div>
+      </div>
+      <div class="detail-item" style="${!t.ddMax?'display:none':''}">
+        <div class="detail-item-label">Max DD Left</div>
+        <div class="detail-item-val" style="color:${parseFloat(t.ddMax)<500?'var(--loss)':parseFloat(t.ddMax)<1500?'#f6c90e':'var(--text)'}">${t.ddMax?fmtMoney(parseFloat(t.ddMax)):'—'}</div>
+      </div>`:''}
     </div>
     <div style="margin-bottom:13px;">
       <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:7px;">Prop Firm Accounts</div>
