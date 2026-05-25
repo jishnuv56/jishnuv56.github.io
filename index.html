@@ -3991,32 +3991,74 @@ async function deleteAcct(id){
 }
 
 function getAcctStats(acct){
-  // Pull all funded trades linked to this account name
-  const linked=trades.filter(t=>{
-    if(!t.accountRows||!t.accountRows.length) return t.account===acct.name;
-    return t.accountRows.some(r=>r.account===acct.name);
-  });
-  let currentPnl=0;
-  linked.forEach(t=>{
+  const acctNameLower=acct.name.trim().toLowerCase();
+
+  // Match trades from both funded + eval pools by account name (case-insensitive)
+  function matchTrades(pool){
+    return pool.filter(t=>{
+      if(t.accountRows&&t.accountRows.length){
+        return t.accountRows.some(r=>(r.account||'').trim().toLowerCase()===acctNameLower);
+      }
+      return (t.account||'').trim().toLowerCase()===acctNameLower;
+    });
+  }
+
+  // Use funded trades for funded accounts, eval trades for eval phases
+  const isEvalPhase=acct.phase&&acct.phase.toLowerCase().includes('eval');
+  const pool=isEvalPhase?[...evalTrades,...trades]:trades;
+  const linked=matchTrades(pool);
+
+  // Calculate P&L per trade (respecting copies per account row)
+  const tradePnls=linked.map(t=>{
     const base=parseFloat(t.pnl)||0;
     if(t.accountRows&&t.accountRows.length){
-      const row=t.accountRows.find(r=>r.account===acct.name);
-      if(row) currentPnl+=base*(parseInt(row.copies)||1);
-    }else{
-      currentPnl+=base*(parseInt(t.copies)||1);
+      const row=t.accountRows.find(r=>(r.account||'').trim().toLowerCase()===acctNameLower);
+      return row?base*(parseInt(row.copies)||1):base;
     }
+    return base*(parseInt(t.copies)||1);
   });
-  const currentBalance=acct.startingBalance+currentPnl;
-  const profitTargetAmt=(acct.startingBalance||acct.size)*(acct.profitTarget/100);
+
+  // Running balance curve (starting from startingBalance)
+  const startBal=parseFloat(acct.startingBalance)||parseFloat(acct.size)||0;
+  let runningBal=startBal;
+  let peakBal=startBal;
+  let maxDrawdownReached=0; // highest drawdown from peak ever reached
+
+  // Sort trades by date ascending to compute proper trailing drawdown
+  const sortedTrades=[...linked].map((t,i)=>({t,pnl:tradePnls[i]}))
+    .sort((a,b)=>new Date(a.t.date)-new Date(b.t.date));
+
+  sortedTrades.forEach(({pnl})=>{
+    runningBal+=pnl;
+    if(runningBal>peakBal) peakBal=runningBal;
+    const drawdownFromPeak=peakBal-runningBal;
+    if(drawdownFromPeak>maxDrawdownReached) maxDrawdownReached=drawdownFromPeak;
+  });
+
+  const currentPnl=runningBal-startBal;
+  const currentBalance=runningBal;
+
+  // Drawdown remaining = max allowed - max drawdown reached so far
+  const maxDDAmt=startBal*(acct.maxDD/100);
+  const dailyDDAmt=startBal*(acct.dailyDD/100);
+  const maxDDUsedPct=maxDDAmt>0?Math.min(100,(maxDrawdownReached/maxDDAmt)*100):0;
+
+  // Profit target
+  const profitTargetAmt=startBal*(acct.profitTarget/100);
   const profitProgress=profitTargetAmt>0?Math.min(100,Math.max(0,(currentPnl/profitTargetAmt)*100)):0;
-  const maxDDAmt=(acct.startingBalance||acct.size)*(acct.maxDD/100);
-  const dailyDDAmt=(acct.startingBalance||acct.size)*(acct.dailyDD/100);
-  const drawdownUsed=currentPnl<0?Math.abs(currentPnl):0;
-  const maxDDUsedPct=maxDDAmt>0?Math.min(100,(drawdownUsed/maxDDAmt)*100):0;
+
   const wins=linked.filter(t=>t.result==='W').length;
   const decided=linked.filter(t=>t.result!=='BE').length;
   const wr=decided?Math.round(wins/decided*100):0;
-  return{linked,currentPnl,currentBalance,profitTargetAmt,profitProgress,maxDDAmt,dailyDDAmt,drawdownUsed,maxDDUsedPct,wins,wr,tradeCount:linked.length};
+
+  return{
+    linked,currentPnl,currentBalance,
+    profitTargetAmt,profitProgress,
+    maxDDAmt,dailyDDAmt,
+    drawdownUsed:maxDrawdownReached,
+    maxDDUsedPct,wins,wr,
+    tradeCount:linked.length
+  };
 }
 
 function renderAccounts(){
