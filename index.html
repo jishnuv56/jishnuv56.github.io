@@ -554,6 +554,56 @@ select option{background:#111318;}
 .tbd-empty h3{font-size:14px;color:var(--text2);margin-bottom:5px;}
 .tbd-empty p{font-size:12px;line-height:1.6;}
 
+/* ── Account Management ── */
+.acct-page{padding:22px 28px;}
+.acct-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+.acct-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:22px;}
+.acct-sum-card{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:12px 15px;}
+.acct-sum-label{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:4px;}
+.acct-sum-val{font-family:var(--mono);font-size:18px;font-weight:600;}
+.acct-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px;}
+.acct-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:16px 18px;position:relative;overflow:hidden;transition:border-color .2s;}
+.acct-card:hover{border-color:var(--border2);}
+.acct-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent2);}
+.acct-card.status-Blown::before{background:var(--loss);}
+.acct-card.status-Passed::before,.acct-card.status-Payout-Pending::before{background:var(--win);}
+.acct-card.status-Active::before{background:var(--accent);}
+.acct-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;}
+.acct-name{font-size:13px;font-weight:600;margin-bottom:2px;}
+.acct-firm{font-size:10px;color:var(--text3);font-family:var(--mono);}
+.acct-badges{display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
+.acct-status-tag{font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;font-family:var(--mono);}
+.acct-status-tag.Active{background:rgba(0,229,160,.12);color:var(--accent);}
+.acct-status-tag.Passed{background:rgba(34,197,94,.12);color:var(--win);}
+.acct-status-tag.Blown{background:rgba(239,68,68,.12);color:var(--loss);}
+.acct-status-tag.Payout-Pending{background:rgba(167,139,250,.12);color:var(--payout);}
+.acct-phase-tag{font-size:10px;padding:2px 8px;border-radius:4px;font-family:var(--mono);background:rgba(0,148,255,.1);color:var(--accent2);}
+.acct-pnl-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;}
+.acct-stat{background:var(--bg);border-radius:6px;padding:8px 10px;}
+.acct-stat-label{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:3px;}
+.acct-stat-val{font-family:var(--mono);font-size:13px;font-weight:600;}
+/* Progress bars */
+.acct-bar-wrap{margin-bottom:9px;}
+.acct-bar-label{display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-bottom:4px;}
+.acct-bar-label span{font-family:var(--mono);}
+.acct-bar-track{height:6px;background:var(--border2);border-radius:3px;overflow:hidden;}
+.acct-bar-fill{height:100%;border-radius:3px;transition:width .4s ease;}
+.acct-bar-fill.profit{background:linear-gradient(90deg,var(--accent),var(--win));}
+.acct-bar-fill.daily-dd{background:linear-gradient(90deg,var(--win),#f6c90e);}
+.acct-bar-fill.daily-dd.warn{background:linear-gradient(90deg,#f6c90e,var(--loss));}
+.acct-bar-fill.daily-dd.danger{background:var(--loss);}
+.acct-bar-fill.total-dd{background:linear-gradient(90deg,var(--accent2),#f6c90e);}
+.acct-bar-fill.total-dd.warn{background:linear-gradient(90deg,#f6c90e,var(--loss));}
+.acct-bar-fill.total-dd.danger{background:var(--loss);}
+.acct-card-actions{display:flex;gap:6px;margin-top:10px;}
+
+/* Account modal */
+.acct-modal{max-width:480px;width:95vw;max-height:90vh;overflow-y:auto;}
+
+/* ── Account Management responsive ── */
+@media(max-width:900px){.acct-summary{grid-template-columns:1fr 1fr;}.acct-grid{grid-template-columns:1fr;}}
+@media(max-width:480px){.acct-summary{grid-template-columns:1fr 1fr;gap:6px;}.acct-pnl-row{grid-template-columns:1fr 1fr;}.acct-page{padding:14px;}}
+
 /* ═══════════════════════════════════════════════════════════
    RESPONSIVE — tablet (≤900px) + portrait
 ═══════════════════════════════════════════════════════════ */
@@ -844,6 +894,7 @@ select option{background:#111318;}
       <div class="tab-sub-row active" id="tabsubs-funded">
         <button class="tab-sub-btn active" id="tab-btn-list" onclick="switchTab('list')">📋 Trade Log</button>
         <button class="tab-sub-btn" id="tab-btn-calendar" onclick="switchTab('calendar')">📅 Calendar</button>
+        <button class="tab-sub-btn" id="tab-btn-accounts" onclick="switchTab('accounts')">🏦 Accounts</button>
       </div>
       <!-- Eval sub-tabs -->
       <div class="tab-sub-row" id="tabsubs-eval">
@@ -883,6 +934,23 @@ select option{background:#111318;}
       <div class="right-panel" id="right-panel">
         <div class="empty-state"><div class="icon">📈</div><h3>Select a trade to view</h3><p>Or click <strong>New Trade</strong> to log your latest entry.</p></div>
       </div>
+    </div>
+  </div>
+
+  <!-- ── ACCOUNTS TAB ── -->
+  <div class="tab-page" id="tab-accounts">
+    <div class="acct-page">
+      <div class="acct-header">
+        <div>
+          <div class="panel-title" style="font-size:14px;">🏦 Account Management</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px;">Track your prop firm accounts, targets and drawdown limits</div>
+        </div>
+        <button class="btn-add" onclick="openAcctForm()">＋ Add Account</button>
+      </div>
+      <!-- Summary row -->
+      <div class="acct-summary" id="acct-summary"></div>
+      <!-- Account cards -->
+      <div class="acct-grid" id="acct-grid"></div>
     </div>
   </div>
 
@@ -1352,6 +1420,90 @@ select option{background:#111318;}
   </div>
 </div>
 
+<!-- Account Modal -->
+<div class="modal-overlay" id="acct-modal">
+  <div class="modal acct-modal">
+    <h3 id="acct-modal-title">＋ Add Account</h3>
+
+    <div class="form-row" style="margin-bottom:13px;">
+      <div>
+        <label style="display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:5px;">Account Name</label>
+        <input type="text" id="acct-name" placeholder="e.g. APEX-100K-01" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:9px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;">
+      </div>
+      <div>
+        <label style="display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:5px;">Prop Firm</label>
+        <select id="acct-firm" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:9px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;">
+          <option value="">— Select Firm —</option>
+          <option>LUCID TRADING</option>
+          <option>APEX TRADER</option>
+          <option>MY FUNDED FUTURES</option>
+          <option>TRADEIFY</option>
+          <option>FUNDEDNEXT</option>
+          <option value="__custom__">✏ Other…</option>
+        </select>
+        <input type="text" id="acct-firm-custom" placeholder="Firm name…" style="display:none;margin-top:6px;width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:9px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;">
+      </div>
+    </div>
+
+    <div class="form-row" style="margin-bottom:13px;">
+      <div>
+        <label style="display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:5px;">Account Size ($)</label>
+        <input type="number" id="acct-size" placeholder="100000" step="1000" min="0" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:9px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;">
+      </div>
+      <div>
+        <label style="display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:5px;">Starting Balance ($)</label>
+        <input type="number" id="acct-starting" placeholder="100000" step="0.01" min="0" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:9px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;">
+      </div>
+    </div>
+
+    <div class="form-row" style="margin-bottom:13px;">
+      <div>
+        <label style="display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:5px;">Profit Target (%)</label>
+        <input type="number" id="acct-target" placeholder="10" step="0.1" min="0" max="100" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:9px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;">
+      </div>
+      <div>
+        <label style="display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:5px;">Max Daily DD (%)</label>
+        <input type="number" id="acct-daily-dd" placeholder="5" step="0.1" min="0" max="100" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:9px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;">
+      </div>
+    </div>
+
+    <div class="form-row" style="margin-bottom:13px;">
+      <div>
+        <label style="display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:5px;">Max Total DD (%)</label>
+        <input type="number" id="acct-max-dd" placeholder="10" step="0.1" min="0" max="100" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:9px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;">
+      </div>
+      <div>
+        <label style="display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:5px;">Phase</label>
+        <select id="acct-phase" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:9px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;">
+          <option value="Eval Phase 1">Eval Phase 1</option>
+          <option value="Eval Phase 2">Eval Phase 2</option>
+          <option value="Funded">Funded</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-bottom:13px;">
+      <label style="display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:5px;">Status</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;" id="acct-status-row">
+        <button class="acct-status-btn active" data-status="Active" onclick="setAcctStatus(this)" style="flex:1;padding:8px;border:1px solid var(--accent);border-radius:6px;background:rgba(0,229,160,.1);color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--sans);">🟢 Active</button>
+        <button class="acct-status-btn" data-status="Passed" onclick="setAcctStatus(this)" style="flex:1;padding:8px;border:1px solid var(--border2);border-radius:6px;background:transparent;color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--sans);">✅ Passed</button>
+        <button class="acct-status-btn" data-status="Blown" onclick="setAcctStatus(this)" style="flex:1;padding:8px;border:1px solid var(--border2);border-radius:6px;background:transparent;color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--sans);">💥 Blown</button>
+        <button class="acct-status-btn" data-status="Payout Pending" onclick="setAcctStatus(this)" style="flex:1;padding:8px;border:1px solid var(--border2);border-radius:6px;background:transparent;color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--sans);">💜 Payout</button>
+      </div>
+    </div>
+
+    <div style="margin-bottom:13px;">
+      <label style="display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:5px;">Notes (optional)</label>
+      <input type="text" id="acct-notes" placeholder="e.g. PA account, challenge started Jan 2025…" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:9px 10px;color:var(--text);font-family:var(--sans);font-size:12px;outline:none;">
+    </div>
+
+    <div style="display:flex;gap:9px;">
+      <button class="btn-save" style="margin:0;" onclick="saveAcct()">💾 Save Account</button>
+      <button class="btn-edit" style="margin:0;flex:0 0 auto;width:auto;padding:8px 16px;" onclick="closeAcctForm()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1382,6 +1534,7 @@ let extraAccounts=[];
 let customChecklist=[];
 let notes=[];
 let tradeBreakdowns=[];
+let accountProfiles=[];  // funded account profile cards
 let currentFilter='all', currentEvalFilter='all';
 let selectedTradeId=null, selectedEvalTradeId=null;
 let editingId=null, editingEvalId=null;
@@ -1473,6 +1626,7 @@ async function loadData(){
     customChecklist=data.customChecklist||[];
     notes=data.notes||[];
     tradeBreakdowns=data.tradeBreakdowns||[];
+    accountProfiles=data.accountProfiles||[];
     if(data.expenses&&!finances.length){
       finances=[
         ...data.expenses.map(e=>({...e,type:'expense'})),
@@ -1480,19 +1634,19 @@ async function loadData(){
       ];
     }
   }else{
-    trades=[];evalTrades=[];finances=[];extraAccounts=[];customChecklist=[];notes=[];tradeBreakdowns=[];
-    await writeFile(DATA_PATH,{trades,evalTrades,finances,accounts:extraAccounts,customChecklist,notes,tradeBreakdowns},'Init trading journal');
+    trades=[];evalTrades=[];finances=[];extraAccounts=[];customChecklist=[];notes=[];tradeBreakdowns=[];accountProfiles=[];
+    await writeFile(DATA_PATH,{trades,evalTrades,finances,accounts:extraAccounts,customChecklist,notes,tradeBreakdowns,accountProfiles},'Init trading journal');
   }
 }
 async function saveData(msg='Update'){
   setSyncState('syncing','saving…');
-  try{await writeFile(DATA_PATH,{trades,evalTrades,finances,accounts:extraAccounts,customChecklist,notes,tradeBreakdowns},msg);setSyncState('synced','synced');}
+  try{await writeFile(DATA_PATH,{trades,evalTrades,finances,accounts:extraAccounts,customChecklist,notes,tradeBreakdowns,accountProfiles},msg);setSyncState('synced','synced');}
   catch(e){setSyncState('error','save failed');showToast('❌ Save failed: '+e.message,'error');}
 }
 
 // ── TABS ──────────────────────────────────────────────────
 const TAB_GROUPS={
-  list:'funded', calendar:'funded',
+  list:'funded', calendar:'funded', accounts:'funded',
   evaljournal:'eval', evalcalendar:'eval',
   expectancy:'analysis', breakdown:'analysis', expenses:'analysis', notes:'analysis', session:'analysis', tradebreakdown:'analysis'
 };
@@ -1529,6 +1683,7 @@ function switchTab(name){
   if(name==='notes')renderNotes();
   if(name==='session')renderSession();
   if(name==='tradebreakdown')renderTbd();
+  if(name==='accounts')renderAccounts();
 }
 
 // ── RENDER ALL ────────────────────────────────────────────
@@ -3751,6 +3906,214 @@ function closeBottomSheet(){
     backdrop.style.opacity='1'; // reset for next open
   }
   document.body.style.overflow='';
+}
+
+// ── ACCOUNT MANAGEMENT ───────────────────────────────────
+let editingAcctId=null;
+
+function openAcctForm(id){
+  editingAcctId=id||null;
+  const a=id?accountProfiles.find(a=>a.id===id):null;
+  document.getElementById('acct-modal-title').textContent=a?'✏ Edit Account':'＋ Add Account';
+  document.getElementById('acct-name').value=a?.name||'';
+  const firmSel=document.getElementById('acct-firm');
+  const PRESET_FIRMS=['LUCID TRADING','APEX TRADER','MY FUNDED FUTURES','TRADEIFY','FUNDEDNEXT'];
+  if(a?.firm&&!PRESET_FIRMS.includes(a.firm)){firmSel.value='__custom__';document.getElementById('acct-firm-custom').style.display='block';document.getElementById('acct-firm-custom').value=a.firm;}
+  else{firmSel.value=a?.firm||'';document.getElementById('acct-firm-custom').style.display='none';}
+  document.getElementById('acct-size').value=a?.size||'';
+  document.getElementById('acct-starting').value=a?.startingBalance||'';
+  document.getElementById('acct-target').value=a?.profitTarget||'';
+  document.getElementById('acct-daily-dd').value=a?.dailyDD||'';
+  document.getElementById('acct-max-dd').value=a?.maxDD||'';
+  document.getElementById('acct-phase').value=a?.phase||'Eval Phase 1';
+  document.getElementById('acct-notes').value=a?.notes||'';
+  // Set status buttons
+  const status=a?.status||'Active';
+  document.querySelectorAll('.acct-status-btn').forEach(b=>{
+    b.removeAttribute('data-active');
+    b.style.borderColor='var(--border2)';b.style.background='transparent';b.style.color='var(--text2)';
+  });
+  const activeBtn=document.querySelector(`.acct-status-btn[data-status="${status}"]`);
+  if(activeBtn) setAcctStatus(activeBtn);
+  document.getElementById('acct-modal').classList.add('open');
+}
+
+function closeAcctForm(){document.getElementById('acct-modal').classList.remove('open');editingAcctId=null;}
+
+function setAcctStatus(btn){
+  const colors={Active:'var(--accent)',Passed:'var(--win)',Blown:'var(--loss)','Payout Pending':'var(--payout)'};
+  const bgs={Active:'rgba(0,229,160,.1)',Passed:'rgba(34,197,94,.1)',Blown:'rgba(239,68,68,.1)','Payout Pending':'rgba(167,139,250,.1)'};
+  document.querySelectorAll('.acct-status-btn').forEach(b=>{
+    b.style.borderColor='var(--border2)';b.style.background='transparent';b.style.color='var(--text2)';
+    b.removeAttribute('data-active');
+  });
+  btn.style.borderColor=colors[btn.dataset.status]||'var(--accent)';
+  btn.style.background=bgs[btn.dataset.status]||'rgba(0,229,160,.1)';
+  btn.style.color=colors[btn.dataset.status]||'var(--accent)';
+  btn.setAttribute('data-active','1');
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('acct-firm')?.addEventListener('change',function(){
+    document.getElementById('acct-firm-custom').style.display=this.value==='__custom__'?'block':'none';
+  });
+});
+
+async function saveAcct(){
+  const name=document.getElementById('acct-name').value.trim();
+  if(!name){showToast('Account name is required','error');return;}
+  const firmSel=document.getElementById('acct-firm').value;
+  const firm=firmSel==='__custom__'?document.getElementById('acct-firm-custom').value.trim():firmSel;
+  const size=parseFloat(document.getElementById('acct-size').value)||0;
+  const startingBalance=parseFloat(document.getElementById('acct-starting').value)||size;
+  const profitTarget=parseFloat(document.getElementById('acct-target').value)||10;
+  const dailyDD=parseFloat(document.getElementById('acct-daily-dd').value)||5;
+  const maxDD=parseFloat(document.getElementById('acct-max-dd').value)||10;
+  const phase=document.getElementById('acct-phase').value;
+  const notes=document.getElementById('acct-notes').value.trim();
+  const statusBtn=document.querySelector('.acct-status-btn[data-active="1"]')||document.querySelector('.acct-status-btn');
+  const status=statusBtn?.dataset.status||'Active';
+  const entry={id:editingAcctId||uid(),name,firm,size,startingBalance,profitTarget,dailyDD,maxDD,phase,status,notes,createdAt:editingAcctId?(accountProfiles.find(a=>a.id===editingAcctId)?.createdAt||new Date().toISOString()):new Date().toISOString()};
+  if(editingAcctId){const idx=accountProfiles.findIndex(a=>a.id===editingAcctId);if(idx!==-1)accountProfiles[idx]=entry;}
+  else accountProfiles.push(entry);
+  closeAcctForm();
+  renderAccounts();
+  await saveData('Save account profile');
+  showToast('✅ Account saved!','success');
+}
+
+async function deleteAcct(id){
+  if(!confirm('Delete this account profile?'))return;
+  accountProfiles=accountProfiles.filter(a=>a.id!==id);
+  renderAccounts();
+  await saveData('Delete account profile');
+  showToast('🗑 Account deleted');
+}
+
+function getAcctStats(acct){
+  // Pull all funded trades linked to this account name
+  const linked=trades.filter(t=>{
+    if(!t.accountRows||!t.accountRows.length) return t.account===acct.name;
+    return t.accountRows.some(r=>r.account===acct.name);
+  });
+  let currentPnl=0;
+  linked.forEach(t=>{
+    const base=parseFloat(t.pnl)||0;
+    if(t.accountRows&&t.accountRows.length){
+      const row=t.accountRows.find(r=>r.account===acct.name);
+      if(row) currentPnl+=base*(parseInt(row.copies)||1);
+    }else{
+      currentPnl+=base*(parseInt(t.copies)||1);
+    }
+  });
+  const currentBalance=acct.startingBalance+currentPnl;
+  const profitTargetAmt=(acct.startingBalance||acct.size)*(acct.profitTarget/100);
+  const profitProgress=profitTargetAmt>0?Math.min(100,Math.max(0,(currentPnl/profitTargetAmt)*100)):0;
+  const maxDDAmt=(acct.startingBalance||acct.size)*(acct.maxDD/100);
+  const dailyDDAmt=(acct.startingBalance||acct.size)*(acct.dailyDD/100);
+  const drawdownUsed=currentPnl<0?Math.abs(currentPnl):0;
+  const maxDDUsedPct=maxDDAmt>0?Math.min(100,(drawdownUsed/maxDDAmt)*100):0;
+  const wins=linked.filter(t=>t.result==='W').length;
+  const decided=linked.filter(t=>t.result!=='BE').length;
+  const wr=decided?Math.round(wins/decided*100):0;
+  return{linked,currentPnl,currentBalance,profitTargetAmt,profitProgress,maxDDAmt,dailyDDAmt,drawdownUsed,maxDDUsedPct,wins,wr,tradeCount:linked.length};
+}
+
+function renderAccounts(){
+  const grid=document.getElementById('acct-grid');
+  const summary=document.getElementById('acct-summary');
+  if(!grid)return;
+
+  // Summary row
+  const total=accountProfiles.length;
+  const active=accountProfiles.filter(a=>a.status==='Active').length;
+  const passed=accountProfiles.filter(a=>a.status==='Passed'||a.status==='Payout Pending').length;
+  const blown=accountProfiles.filter(a=>a.status==='Blown').length;
+  summary.innerHTML=`
+    <div class="acct-sum-card"><div class="acct-sum-label">Total Accounts</div><div class="acct-sum-val">${total}</div></div>
+    <div class="acct-sum-card"><div class="acct-sum-label">Active</div><div class="acct-sum-val" style="color:var(--accent)">${active}</div></div>
+    <div class="acct-sum-card"><div class="acct-sum-label">Passed / Payout</div><div class="acct-sum-val" style="color:var(--win)">${passed}</div></div>
+    <div class="acct-sum-card"><div class="acct-sum-label">Blown</div><div class="acct-sum-val" style="color:var(--loss)">${blown}</div></div>`;
+
+  if(!accountProfiles.length){
+    grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:56px 20px;color:var(--text3);">
+      <div style="font-size:36px;margin-bottom:10px;">🏦</div>
+      <h3 style="font-size:14px;color:var(--text2);margin-bottom:5px;">No accounts yet</h3>
+      <p style="font-size:12px;">Click <strong>Add Account</strong> to track your prop firm accounts.</p></div>`;
+    return;
+  }
+
+  grid.innerHTML=accountProfiles.map(a=>{
+    const s=getAcctStats(a);
+    const statusClass=a.status.replace(' ','-');
+    const pnlColor=s.currentPnl>=0?'var(--win)':'var(--loss)';
+    const ddWarn=s.maxDDUsedPct>70;
+    const ddDanger=s.maxDDUsedPct>90;
+    const ptWarn=s.profitProgress>80;
+    const profitBarClass=ptWarn?'profit':'profit';
+    const ddBarClass=ddDanger?'total-dd danger':ddWarn?'total-dd warn':'total-dd';
+
+    return`<div class="acct-card status-${statusClass}">
+      <div class="acct-card-top">
+        <div>
+          <div class="acct-name">${esc(a.name)}</div>
+          <div class="acct-firm">${esc(a.firm||'—')} · $${(a.size||0).toLocaleString()}</div>
+        </div>
+        <div class="acct-badges">
+          <span class="acct-status-tag ${statusClass}">${a.status}</span>
+          <span class="acct-phase-tag">${esc(a.phase)}</span>
+        </div>
+      </div>
+
+      <div class="acct-pnl-row">
+        <div class="acct-stat">
+          <div class="acct-stat-label">Current P&L</div>
+          <div class="acct-stat-val" style="color:${pnlColor}">${s.currentPnl>=0?'+':''}${fmtMoney(s.currentPnl)}</div>
+        </div>
+        <div class="acct-stat">
+          <div class="acct-stat-label">Balance</div>
+          <div class="acct-stat-val">${fmtMoney(s.currentBalance)}</div>
+        </div>
+        <div class="acct-stat">
+          <div class="acct-stat-label">Trades · WR</div>
+          <div class="acct-stat-val">${s.tradeCount} · ${s.tradeCount?s.wr+'%':'—'}</div>
+        </div>
+      </div>
+
+      <!-- Profit target progress -->
+      <div class="acct-bar-wrap">
+        <div class="acct-bar-label">
+          <span>Profit Target (${a.profitTarget}%)</span>
+          <span style="color:${s.profitProgress>=100?'var(--win)':'var(--text2)'}">${s.profitProgress.toFixed(1)}% · ${fmtMoney(s.currentPnl)} / ${fmtMoney(s.profitTargetAmt)}</span>
+        </div>
+        <div class="acct-bar-track">
+          <div class="acct-bar-fill ${profitBarClass}" style="width:${Math.min(100,s.profitProgress)}%;${s.profitProgress>=100?'background:var(--win);':''}"></div>
+        </div>
+      </div>
+
+      <!-- Max DD usage -->
+      <div class="acct-bar-wrap">
+        <div class="acct-bar-label">
+          <span style="color:${ddDanger?'var(--loss)':ddWarn?'#f6c90e':'var(--text2)'}">Max Drawdown (${a.maxDD}%)</span>
+          <span style="color:${ddDanger?'var(--loss)':ddWarn?'#f6c90e':'var(--text2)'}">${s.maxDDUsedPct.toFixed(1)}% used · ${fmtMoney(s.drawdownUsed)} / ${fmtMoney(s.maxDDAmt)}</span>
+        </div>
+        <div class="acct-bar-track">
+          <div class="acct-bar-fill ${ddBarClass}" style="width:${s.maxDDUsedPct}%;"></div>
+        </div>
+      </div>
+
+      <!-- Daily DD info -->
+      <div style="font-size:10px;color:var(--text3);margin-bottom:10px;">
+        Daily DD limit: <span style="font-family:var(--mono);color:var(--text2);">${fmtMoney(s.dailyDDAmt)}</span>
+        ${a.notes?`<span style="margin-left:8px;color:var(--text3);">· ${esc(a.notes)}</span>`:''}
+      </div>
+
+      <div class="acct-card-actions">
+        <button class="exp-btn-del" onclick="openAcctForm('${a.id}')" style="padding:5px 10px;font-size:11px;">✏ Edit</button>
+        <button class="exp-btn-del" onclick="deleteAcct('${a.id}')" style="padding:5px 10px;font-size:11px;">🗑 Delete</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // ── HELPERS ───────────────────────────────────────────────
