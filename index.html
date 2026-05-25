@@ -2481,16 +2481,6 @@ function showForm(trade,mode){
         <input type="number" id="${isEval?'ef':'f'}-rr" placeholder="2.5" step="0.1" min="0" value="${t.rr||''}">
       </div>
     </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Daily Drawdown Left ($)</label>
-        <input type="number" id="${isEval?'ef':'f'}-dd-daily" placeholder="e.g. 1200.00" step="0.01" min="0" value="${t.ddDaily||''}">
-      </div>
-      <div class="form-group">
-        <label>Max Drawdown Left ($)</label>
-        <input type="number" id="${isEval?'ef':'f'}-dd-max" placeholder="e.g. 3500.00" step="0.01" min="0" value="${t.ddMax||''}">
-      </div>
-    </div>
 
     <div class="form-group">
       <label style="display:flex;align-items:center;justify-content:space-between;">
@@ -2588,11 +2578,45 @@ function getChartLinks(mode){
 
 function buildAccountRowHTML(account,copies,idx,mode){
   const p=mode==='eval'?'ef':'f';
-  const accOptions=allAccounts().map(a=>`<option value="${esc(a)}" ${account===a?'selected':''}>${esc(a)}</option>`).join('');
+
+  // Build options: account profiles grouped by firm, then preset accounts as fallback
+  let optionsHTML='<option value="">— Account —</option>';
+
+  if(accountProfiles.length){
+    // Group profiles by firm
+    const firmMap={};
+    accountProfiles.forEach(a=>{
+      const firm=a.firm||'Other';
+      if(!firmMap[firm]) firmMap[firm]=[];
+      firmMap[firm].push(a);
+    });
+    Object.keys(firmMap).sort().forEach(firm=>{
+      optionsHTML+=`<optgroup label="${esc(firm)}">`;
+      firmMap[firm].forEach(a=>{
+        optionsHTML+=`<option value="${esc(a.name)}" ${account===a.name?'selected':''}>${esc(a.name)}</option>`;
+      });
+      optionsHTML+=`</optgroup>`;
+    });
+    // Add a divider then preset accounts not already covered by profiles
+    const profileNames=new Set(accountProfiles.map(a=>a.name.toLowerCase()));
+    const extraOpts=[...PRESET_ACCOUNTS,...extraAccounts].filter(a=>!profileNames.has(a.toLowerCase()));
+    if(extraOpts.length){
+      optionsHTML+=`<optgroup label="── Other Accounts ──">`;
+      extraOpts.forEach(a=>{
+        optionsHTML+=`<option value="${esc(a)}" ${account===a?'selected':''}>${esc(a)}</option>`;
+      });
+      optionsHTML+=`</optgroup>`;
+    }
+  } else {
+    // No profiles yet — fall back to preset + extra accounts
+    allAccounts().forEach(a=>{
+      optionsHTML+=`<option value="${esc(a)}" ${account===a?'selected':''}>${esc(a)}</option>`;
+    });
+  }
+
   return `<div class="account-row" id="${p}-acc-row-${idx}" style="display:grid;grid-template-columns:1fr 72px 32px;gap:6px;align-items:center;">
     <select class="acc-row-select" onchange="updateMultiPreview('${mode}')" style="background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:8px 9px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;width:100%;">
-      <option value="">— Account —</option>
-      ${accOptions}
+      ${optionsHTML}
     </select>
     <input type="number" class="acc-row-copies" min="1" value="${copies||1}" oninput="updateMultiPreview('${mode}')" placeholder="×" title="Copies" style="background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:8px 6px;color:#f6c90e;font-family:var(--mono);font-size:12px;outline:none;width:100%;text-align:center;">
     <button onclick="removeAccountRow('${p}-acc-row-${idx}','${mode}')" style="background:transparent;border:1px solid var(--border2);color:var(--text3);border-radius:5px;padding:5px 7px;cursor:pointer;font-size:12px;line-height:1;" title="Remove">✕</button>
@@ -2680,8 +2704,6 @@ async function saveTrade(mode){
   const direction=dirBtn?.classList.contains('LONG')?'LONG':'SHORT';
   const pnl=document.getElementById(`${p}-pnl`).value;
   const rr=document.getElementById(`${p}-rr`).value;
-  const ddDaily=document.getElementById(`${p}-dd-daily`)?.value||'';
-  const ddMax=document.getElementById(`${p}-dd-max`)?.value||'';
   const chartLinks=getChartLinks(mode);
   const chartLink=chartLinks[0]?.url||''; // keep for backwards compat
   const notes=document.getElementById(`${p}-notes`).value.trim();
@@ -2710,7 +2732,7 @@ async function saveTrade(mode){
   const session=getActiveSession(mode);
   const marketTiming=getActiveTiming(mode);
   const checklist=getCheckedItems(mode);
-  const trade={id:eId||uid(),date,asset,result,direction,session,marketTiming,checklist,pnl:String(basePnl),copies,totalPnl,accountRows,account,rr:rr||'',ddDaily:ddDaily||'',ddMax:ddMax||'',chartLink,chartLinks,notes,updatedAt:new Date().toISOString()};
+  const trade={id:eId||uid(),date,asset,result,direction,session,marketTiming,checklist,pnl:String(basePnl),copies,totalPnl,accountRows,account,rr:rr||'',chartLink,chartLinks,notes,updatedAt:new Date().toISOString()};
   if(isEval){
     if(editingEvalId){const idx=evalTrades.findIndex(t=>t.id===editingEvalId);if(idx!==-1)evalTrades[idx]=trade;}
     else evalTrades.unshift(trade);
@@ -2783,15 +2805,6 @@ function showDetail(id,mode){
       <div class="detail-item"><div class="detail-item-label">PnL / Account</div><div class="detail-item-val" style="color:${basePnl>=0?'var(--win)':'var(--loss)'}">${fmtPnl(basePnl)}</div></div>
       <div class="detail-item"><div class="detail-item-label">RR Ratio</div><div class="detail-item-val">${t.rr?t.rr+'R':'—'}</div></div>
       <div class="detail-item" style="grid-column:span 2;"><div class="detail-item-label">Total PnL</div><div class="detail-item-val" style="font-size:18px;color:${totalPnl>=0?'var(--win)':'var(--loss)'}">${fmtPnl(totalPnl)}</div></div>
-      ${(t.ddDaily||t.ddMax)?`
-      <div class="detail-item" style="${!t.ddDaily?'display:none':''}">
-        <div class="detail-item-label">Daily DD Left</div>
-        <div class="detail-item-val" style="color:${parseFloat(t.ddDaily)<200?'var(--loss)':parseFloat(t.ddDaily)<500?'#f6c90e':'var(--text)'}">${t.ddDaily?fmtMoney(parseFloat(t.ddDaily)):'—'}</div>
-      </div>
-      <div class="detail-item" style="${!t.ddMax?'display:none':''}">
-        <div class="detail-item-label">Max DD Left</div>
-        <div class="detail-item-val" style="color:${parseFloat(t.ddMax)<500?'var(--loss)':parseFloat(t.ddMax)<1500?'#f6c90e':'var(--text)'}">${t.ddMax?fmtMoney(parseFloat(t.ddMax)):'—'}</div>
-      </div>`:''}
     </div>
     <div style="margin-bottom:13px;">
       <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:7px;">Prop Firm Accounts</div>
@@ -3993,55 +4006,87 @@ async function deleteAcct(id){
 function getAcctStats(acct){
   const acctNameLower=acct.name.trim().toLowerCase();
 
-  // Match trades from both funded + eval pools by account name (case-insensitive)
+  // ── Match trades by account name (case-insensitive) ──
   function matchTrades(pool){
     return pool.filter(t=>{
-      if(t.accountRows&&t.accountRows.length){
+      if(t.accountRows&&t.accountRows.length)
         return t.accountRows.some(r=>(r.account||'').trim().toLowerCase()===acctNameLower);
-      }
       return (t.account||'').trim().toLowerCase()===acctNameLower;
     });
   }
 
-  // Use funded trades for funded accounts, eval trades for eval phases
+  // Eval phase → pull from eval pool; Funded → funded pool
   const isEvalPhase=acct.phase&&acct.phase.toLowerCase().includes('eval');
   const pool=isEvalPhase?[...evalTrades,...trades]:trades;
   const linked=matchTrades(pool);
 
-  // Calculate P&L per trade (respecting copies per account row)
-  const tradePnls=linked.map(t=>{
+  // Helper: P&L for this account from one trade
+  function tradePnlForAcct(t){
     const base=parseFloat(t.pnl)||0;
     if(t.accountRows&&t.accountRows.length){
       const row=t.accountRows.find(r=>(r.account||'').trim().toLowerCase()===acctNameLower);
-      return row?base*(parseInt(row.copies)||1):base;
+      return row?base*(parseInt(row.copies)||1):0;
     }
     return base*(parseInt(t.copies)||1);
+  }
+
+  const startBal=parseFloat(acct.startingBalance)||parseFloat(acct.size)||0;
+
+  // ── EOD Trailing Drawdown ─────────────────────────────
+  // Step 1: group trades by date, sum P&L per day
+  const dayMap={};
+  linked.forEach(t=>{
+    const d=t.date||'';
+    if(!dayMap[d]) dayMap[d]=0;
+    dayMap[d]+=tradePnlForAcct(t);
   });
 
-  // Running balance curve (starting from startingBalance)
-  const startBal=parseFloat(acct.startingBalance)||parseFloat(acct.size)||0;
+  // Step 2: walk days in ascending order
+  // Peak updates at END OF DAY (after that day's P&L is added)
+  // Drawdown for a given day = eodPeak (before today) - (runningBal + today's pnl)
+  // i.e. the trailing high only locks in at market close, not intra-day
+  const sortedDays=Object.keys(dayMap).sort();
   let runningBal=startBal;
-  let peakBal=startBal;
-  let maxDrawdownReached=0; // highest drawdown from peak ever reached
+  let eodPeak=startBal;        // peak as of previous EOD
+  let maxDDReached=0;          // worst drawdown from EOD peak ever seen
+  let todayDDfromPeak=0;       // drawdown used today (from yesterday's EOD peak)
 
-  // Sort trades by date ascending to compute proper trailing drawdown
-  const sortedTrades=[...linked].map((t,i)=>({t,pnl:tradePnls[i]}))
-    .sort((a,b)=>new Date(a.t.date)-new Date(b.t.date));
+  sortedDays.forEach((day,idx)=>{
+    const dayPnl=dayMap[day];
+    const balAfterDay=runningBal+dayPnl;
 
-  sortedTrades.forEach(({pnl})=>{
-    runningBal+=pnl;
-    if(runningBal>peakBal) peakBal=runningBal;
-    const drawdownFromPeak=peakBal-runningBal;
-    if(drawdownFromPeak>maxDrawdownReached) maxDrawdownReached=drawdownFromPeak;
+    // Drawdown this day is measured from the EOD peak going INTO this day
+    const ddThisDay=Math.max(0, eodPeak - balAfterDay);
+    if(ddThisDay>maxDDReached) maxDDReached=ddThisDay;
+
+    // Also track TODAY specifically (last day in the list)
+    if(idx===sortedDays.length-1){
+      todayDDfromPeak=Math.max(0, eodPeak - balAfterDay);
+    }
+
+    // Update running balance
+    runningBal=balAfterDay;
+
+    // EOD peak locks in: only updates if today's close is a new high
+    if(runningBal>eodPeak) eodPeak=runningBal;
   });
 
   const currentPnl=runningBal-startBal;
   const currentBalance=runningBal;
 
-  // Drawdown remaining = max allowed - max drawdown reached so far
+  // ── Limits ────────────────────────────────────────────
   const maxDDAmt=startBal*(acct.maxDD/100);
   const dailyDDAmt=startBal*(acct.dailyDD/100);
-  const maxDDUsedPct=maxDDAmt>0?Math.min(100,(maxDrawdownReached/maxDDAmt)*100):0;
+
+  // Max DD: worst single-day close vs its EOD peak
+  const maxDDUsedPct=maxDDAmt>0?Math.min(100,(maxDDReached/maxDDAmt)*100):0;
+
+  // Today's DD used (vs yesterday's EOD peak) — for daily limit gauge
+  const todayDDPct=dailyDDAmt>0?Math.min(100,(todayDDfromPeak/dailyDDAmt)*100):0;
+
+  // Remaining buffers
+  const maxDDRemaining=Math.max(0,maxDDAmt-maxDDReached);
+  const dailyDDRemaining=Math.max(0,dailyDDAmt-todayDDfromPeak);
 
   // Profit target
   const profitTargetAmt=startBal*(acct.profitTarget/100);
@@ -4055,8 +4100,11 @@ function getAcctStats(acct){
     linked,currentPnl,currentBalance,
     profitTargetAmt,profitProgress,
     maxDDAmt,dailyDDAmt,
-    drawdownUsed:maxDrawdownReached,
-    maxDDUsedPct,wins,wr,
+    drawdownUsed:maxDDReached,
+    maxDDUsedPct,
+    todayDDfromPeak,todayDDPct,
+    maxDDRemaining,dailyDDRemaining,
+    eodPeak,wins,wr,
     tradeCount:linked.length
   };
 }
@@ -4089,11 +4137,18 @@ function renderAccounts(){
     const s=getAcctStats(a);
     const statusClass=a.status.replace(' ','-');
     const pnlColor=s.currentPnl>=0?'var(--win)':'var(--loss)';
+
+    // Max trailing DD indicators
     const ddWarn=s.maxDDUsedPct>70;
     const ddDanger=s.maxDDUsedPct>90;
-    const ptWarn=s.profitProgress>80;
-    const profitBarClass=ptWarn?'profit':'profit';
+    const ddColor=ddDanger?'var(--loss)':ddWarn?'#f6c90e':'var(--text2)';
     const ddBarClass=ddDanger?'total-dd danger':ddWarn?'total-dd warn':'total-dd';
+
+    // Today daily DD indicators
+    const dailyWarn=s.todayDDPct>70;
+    const dailyDanger=s.todayDDPct>90;
+    const dailyColor=dailyDanger?'var(--loss)':dailyWarn?'#f6c90e':'var(--text2)';
+    const dailyBarClass=dailyDanger?'daily-dd danger':dailyWarn?'daily-dd warn':'daily-dd';
 
     return`<div class="acct-card status-${statusClass}">
       <div class="acct-card-top">
@@ -4117,38 +4172,62 @@ function renderAccounts(){
           <div class="acct-stat-val">${fmtMoney(s.currentBalance)}</div>
         </div>
         <div class="acct-stat">
+          <div class="acct-stat-label">EOD Peak</div>
+          <div class="acct-stat-val" style="color:var(--accent2)">${fmtMoney(s.eodPeak)}</div>
+        </div>
+      </div>
+
+      <div class="acct-pnl-row" style="margin-bottom:12px;">
+        <div class="acct-stat">
           <div class="acct-stat-label">Trades · WR</div>
           <div class="acct-stat-val">${s.tradeCount} · ${s.tradeCount?s.wr+'%':'—'}</div>
+        </div>
+        <div class="acct-stat">
+          <div class="acct-stat-label">Max DD Remaining</div>
+          <div class="acct-stat-val" style="color:${ddDanger?'var(--loss)':ddWarn?'#f6c90e':'var(--win)'}">${fmtMoney(s.maxDDRemaining)}</div>
+        </div>
+        <div class="acct-stat">
+          <div class="acct-stat-label">Daily DD Remaining</div>
+          <div class="acct-stat-val" style="color:${dailyDanger?'var(--loss)':dailyWarn?'#f6c90e':'var(--win)'}">${fmtMoney(s.dailyDDRemaining)}</div>
         </div>
       </div>
 
       <!-- Profit target progress -->
       <div class="acct-bar-wrap">
         <div class="acct-bar-label">
-          <span>Profit Target (${a.profitTarget}%)</span>
-          <span style="color:${s.profitProgress>=100?'var(--win)':'var(--text2)'}">${s.profitProgress.toFixed(1)}% · ${fmtMoney(s.currentPnl)} / ${fmtMoney(s.profitTargetAmt)}</span>
+          <span>🎯 Profit Target (${a.profitTarget}%)</span>
+          <span style="color:${s.profitProgress>=100?'var(--win)':'var(--text2)'}">
+            ${s.profitProgress.toFixed(1)}% · ${fmtMoney(s.currentPnl)} / ${fmtMoney(s.profitTargetAmt)}
+          </span>
         </div>
         <div class="acct-bar-track">
-          <div class="acct-bar-fill ${profitBarClass}" style="width:${Math.min(100,s.profitProgress)}%;${s.profitProgress>=100?'background:var(--win);':''}"></div>
+          <div class="acct-bar-fill profit" style="width:${Math.min(100,s.profitProgress)}%;${s.profitProgress>=100?'background:var(--win);':''}"></div>
         </div>
       </div>
 
-      <!-- Max DD usage -->
+      <!-- Trailing Max DD (EOD method) -->
       <div class="acct-bar-wrap">
         <div class="acct-bar-label">
-          <span style="color:${ddDanger?'var(--loss)':ddWarn?'#f6c90e':'var(--text2)'}">Max Drawdown (${a.maxDD}%)</span>
-          <span style="color:${ddDanger?'var(--loss)':ddWarn?'#f6c90e':'var(--text2)'}">${s.maxDDUsedPct.toFixed(1)}% used · ${fmtMoney(s.drawdownUsed)} / ${fmtMoney(s.maxDDAmt)}</span>
+          <span style="color:${ddColor}">📉 Trailing Max DD (${a.maxDD}%) <span style="font-size:9px;opacity:.7;">EOD method</span></span>
+          <span style="color:${ddColor}">${s.maxDDUsedPct.toFixed(1)}% used · ${fmtMoney(s.drawdownUsed)} / ${fmtMoney(s.maxDDAmt)}</span>
         </div>
         <div class="acct-bar-track">
           <div class="acct-bar-fill ${ddBarClass}" style="width:${s.maxDDUsedPct}%;"></div>
         </div>
       </div>
 
-      <!-- Daily DD info -->
-      <div style="font-size:10px;color:var(--text3);margin-bottom:10px;">
-        Daily DD limit: <span style="font-family:var(--mono);color:var(--text2);">${fmtMoney(s.dailyDDAmt)}</span>
-        ${a.notes?`<span style="margin-left:8px;color:var(--text3);">· ${esc(a.notes)}</span>`:''}
+      <!-- Today's Daily DD (vs yesterday's EOD peak) -->
+      <div class="acct-bar-wrap">
+        <div class="acct-bar-label">
+          <span style="color:${dailyColor}">📊 Today's Daily DD (${a.dailyDD}%) <span style="font-size:9px;opacity:.7;">vs yesterday close</span></span>
+          <span style="color:${dailyColor}">${s.todayDDPct.toFixed(1)}% used · ${fmtMoney(s.todayDDfromPeak)} / ${fmtMoney(s.dailyDDAmt)}</span>
+        </div>
+        <div class="acct-bar-track">
+          <div class="acct-bar-fill ${dailyBarClass}" style="width:${s.todayDDPct}%;"></div>
+        </div>
       </div>
+
+      ${a.notes?`<div style="font-size:10px;color:var(--text3);margin-bottom:8px;">📝 ${esc(a.notes)}</div>`:''}
 
       <div class="acct-card-actions">
         <button class="exp-btn-del" onclick="openAcctForm('${a.id}')" style="padding:5px 10px;font-size:11px;">✏ Edit</button>
