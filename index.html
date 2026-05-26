@@ -564,8 +564,9 @@ select option{background:#111318;}
 .acct-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px;}
 .acct-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:16px 18px;position:relative;overflow:hidden;transition:border-color .2s;}
 .acct-card:hover{border-color:var(--border2);}
-.acct-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent2);}
+.acct-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent);}
 .acct-card.status-Blown::before{background:var(--loss);}
+.acct-card.status-Blown{opacity:.7;}
 .acct-card.status-Passed::before,.acct-card.status-Payout-Pending::before{background:var(--win);}
 .acct-card.status-Active::before{background:var(--accent);}
 .acct-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;}
@@ -1484,11 +1485,11 @@ select option{background:#111318;}
 
     <div style="margin-bottom:13px;">
       <label style="display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:5px;">Status</label>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;" id="acct-status-row">
-        <button class="acct-status-btn active" data-status="Active" onclick="setAcctStatus(this)" style="flex:1;padding:8px;border:1px solid var(--accent);border-radius:6px;background:rgba(0,229,160,.1);color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--sans);">🟢 Active</button>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Leave unselected if account is currently active. Only mark when the status changes.</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;" id="acct-status-row">
         <button class="acct-status-btn" data-status="Passed" onclick="setAcctStatus(this)" style="flex:1;padding:8px;border:1px solid var(--border2);border-radius:6px;background:transparent;color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--sans);">✅ Passed</button>
         <button class="acct-status-btn" data-status="Blown" onclick="setAcctStatus(this)" style="flex:1;padding:8px;border:1px solid var(--border2);border-radius:6px;background:transparent;color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--sans);">💥 Blown</button>
-        <button class="acct-status-btn" data-status="Payout Pending" onclick="setAcctStatus(this)" style="flex:1;padding:8px;border:1px solid var(--border2);border-radius:6px;background:transparent;color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--sans);">💜 Payout</button>
+        <button class="acct-status-btn" data-status="Payout Pending" onclick="setAcctStatus(this)" style="flex:1;padding:8px;border:1px solid var(--border2);border-radius:6px;background:transparent;color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--sans);">💜 Payout Pending</button>
       </div>
     </div>
 
@@ -3940,30 +3941,37 @@ function openAcctForm(id){
   document.getElementById('acct-max-dd').value=a?.maxDD||'';
   document.getElementById('acct-phase').value=a?.phase||'Eval Phase 1';
   document.getElementById('acct-notes').value=a?.notes||'';
-  // Set status buttons
+  // Set status buttons — reset all first, then activate if not 'Active'
   const status=a?.status||'Active';
   document.querySelectorAll('.acct-status-btn').forEach(b=>{
-    b.removeAttribute('data-active');
     b.style.borderColor='var(--border2)';b.style.background='transparent';b.style.color='var(--text2)';
+    b.removeAttribute('data-active');
   });
-  const activeBtn=document.querySelector(`.acct-status-btn[data-status="${status}"]`);
-  if(activeBtn) setAcctStatus(activeBtn);
+  if(status!=='Active'){
+    const activeBtn=document.querySelector(`.acct-status-btn[data-status="${status}"]`);
+    if(activeBtn) setAcctStatus(activeBtn);
+  }
   document.getElementById('acct-modal').classList.add('open');
 }
 
 function closeAcctForm(){document.getElementById('acct-modal').classList.remove('open');editingAcctId=null;}
 
 function setAcctStatus(btn){
-  const colors={Active:'var(--accent)',Passed:'var(--win)',Blown:'var(--loss)','Payout Pending':'var(--payout)'};
-  const bgs={Active:'rgba(0,229,160,.1)',Passed:'rgba(34,197,94,.1)',Blown:'rgba(239,68,68,.1)','Payout Pending':'rgba(167,139,250,.1)'};
+  const colors={Passed:'var(--win)',Blown:'var(--loss)','Payout Pending':'var(--payout)'};
+  const bgs={Passed:'rgba(34,197,94,.1)',Blown:'rgba(239,68,68,.1)','Payout Pending':'rgba(167,139,250,.1)'};
+  const wasActive=btn.getAttribute('data-active')==='1';
+  // Reset all
   document.querySelectorAll('.acct-status-btn').forEach(b=>{
     b.style.borderColor='var(--border2)';b.style.background='transparent';b.style.color='var(--text2)';
     b.removeAttribute('data-active');
   });
-  btn.style.borderColor=colors[btn.dataset.status]||'var(--accent)';
-  btn.style.background=bgs[btn.dataset.status]||'rgba(0,229,160,.1)';
-  btn.style.color=colors[btn.dataset.status]||'var(--accent)';
-  btn.setAttribute('data-active','1');
+  // If it wasn't active before, activate it; otherwise leave all deselected (= Active)
+  if(!wasActive){
+    btn.style.borderColor=colors[btn.dataset.status]||'var(--border2)';
+    btn.style.background=bgs[btn.dataset.status]||'transparent';
+    btn.style.color=colors[btn.dataset.status]||'var(--text2)';
+    btn.setAttribute('data-active','1');
+  }
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
@@ -3984,8 +3992,8 @@ async function saveAcct(){
   const maxDD=parseFloat(document.getElementById('acct-max-dd').value)||10;
   const phase=document.getElementById('acct-phase').value;
   const notes=document.getElementById('acct-notes').value.trim();
-  const statusBtn=document.querySelector('.acct-status-btn[data-active="1"]')||document.querySelector('.acct-status-btn');
-  const status=statusBtn?.dataset.status||'Active';
+  const statusBtn=document.querySelector('.acct-status-btn[data-active="1"]');
+  const status=statusBtn?.dataset.status||'Active'; // no selection = Active
   const entry={id:editingAcctId||uid(),name,firm,size,startingBalance,profitTarget,dailyDD,maxDD,phase,status,notes,createdAt:editingAcctId?(accountProfiles.find(a=>a.id===editingAcctId)?.createdAt||new Date().toISOString()):new Date().toISOString()};
   if(editingAcctId){const idx=accountProfiles.findIndex(a=>a.id===editingAcctId);if(idx!==-1)accountProfiles[idx]=entry;}
   else accountProfiles.push(entry);
@@ -4136,12 +4144,12 @@ function renderAccounts(){
 
   // Summary row
   const total=accountProfiles.length;
-  const active=accountProfiles.filter(a=>a.status==='Active').length;
+  const active=accountProfiles.filter(a=>a.status!=='Blown').length;
   const passed=accountProfiles.filter(a=>a.status==='Passed'||a.status==='Payout Pending').length;
   const blown=accountProfiles.filter(a=>a.status==='Blown').length;
   summary.innerHTML=`
     <div class="acct-sum-card"><div class="acct-sum-label">Total Accounts</div><div class="acct-sum-val">${total}</div></div>
-    <div class="acct-sum-card"><div class="acct-sum-label">Active</div><div class="acct-sum-val" style="color:var(--accent)">${active}</div></div>
+    <div class="acct-sum-card"><div class="acct-sum-label">Active / Running</div><div class="acct-sum-val" style="color:var(--accent)">${active}</div></div>
     <div class="acct-sum-card"><div class="acct-sum-label">Passed / Payout</div><div class="acct-sum-val" style="color:var(--win)">${passed}</div></div>
     <div class="acct-sum-card"><div class="acct-sum-label">Blown</div><div class="acct-sum-val" style="color:var(--loss)">${blown}</div></div>`;
 
@@ -4177,7 +4185,7 @@ function renderAccounts(){
           <div class="acct-firm">${esc(a.firm||'—')} · $${(a.size||0).toLocaleString()}</div>
         </div>
         <div class="acct-badges">
-          <span class="acct-status-tag ${statusClass}">${a.status}</span>
+          ${a.status!=='Active'?`<span class="acct-status-tag ${statusClass}">${a.status==='Payout Pending'?'💜 Payout Pending':a.status==='Passed'?'✅ Passed':'💥 Blown'}</span>`:''}
           <span class="acct-phase-tag">${esc(a.phase)}</span>
         </div>
       </div>
