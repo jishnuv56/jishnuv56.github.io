@@ -2584,9 +2584,12 @@ function buildAccountRowHTML(account,copies,idx,mode){
   let optionsHTML='<option value="">— Account —</option>';
 
   if(accountProfiles.length){
+    // Only show non-blown accounts
+    const activeProfiles=accountProfiles.filter(a=>a.status!=='Blown');
+
     // Group profiles by firm
     const firmMap={};
-    accountProfiles.forEach(a=>{
+    activeProfiles.forEach(a=>{
       const firm=a.firm||'Other';
       if(!firmMap[firm]) firmMap[firm]=[];
       firmMap[firm].push(a);
@@ -2598,7 +2601,7 @@ function buildAccountRowHTML(account,copies,idx,mode){
       });
       optionsHTML+=`</optgroup>`;
     });
-    // Add a divider then preset accounts not already covered by profiles
+    // Add preset accounts not already covered by profiles
     const profileNames=new Set(accountProfiles.map(a=>a.name.toLowerCase()));
     const extraOpts=[...PRESET_ACCOUNTS,...extraAccounts].filter(a=>!profileNames.has(a.toLowerCase()));
     if(extraOpts.length){
