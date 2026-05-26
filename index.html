@@ -567,6 +567,29 @@ select option{background:#111318;}
 .acct-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent);}
 .acct-card.status-Blown::before{background:var(--loss);}
 .acct-card.status-Blown{opacity:.7;}
+
+/* ── Custom two-level account picker ── */
+.acct-picker{position:relative;width:100%;}
+.acct-picker-trigger{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:8px 9px;color:var(--text);font-family:var(--mono);font-size:12px;cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:6px;transition:border-color .2s;}
+.acct-picker-trigger:hover,.acct-picker-trigger.open{border-color:var(--accent);}
+.acct-picker-trigger .trigger-label{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.acct-picker-trigger .trigger-arrow{font-size:9px;opacity:.5;flex-shrink:0;}
+.acct-picker-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;z-index:600;box-shadow:0 8px 24px rgba(0,0,0,.5);overflow:hidden;display:none;max-height:260px;overflow-y:auto;}
+.acct-picker-dropdown.open{display:block;}
+.acct-picker-firm{padding:8px 12px 4px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);font-family:var(--sans);cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:background .15s;}
+.acct-picker-firm:hover{background:var(--border);}
+.acct-picker-firm.selected{color:var(--accent);}
+.acct-picker-firm .firm-check{font-size:10px;color:var(--accent);display:none;}
+.acct-picker-firm.selected .firm-check{display:inline;}
+.acct-picker-account{padding:7px 12px 7px 22px;font-size:12px;font-family:var(--mono);color:var(--text2);cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:space-between;}
+.acct-picker-account:hover{background:var(--border2);color:var(--text);}
+.acct-picker-account.selected{color:var(--accent2);background:rgba(0,148,255,.08);}
+.acct-picker-account .acct-check{font-size:10px;color:var(--accent2);display:none;}
+.acct-picker-account.selected .acct-check{display:inline;}
+.acct-picker-sep{height:1px;background:var(--border);margin:4px 0;}
+.acct-picker-other{padding:7px 12px;font-size:11px;font-family:var(--mono);color:var(--text2);cursor:pointer;transition:background .15s;}
+.acct-picker-other:hover{background:var(--border2);color:var(--text);}
+.acct-picker-other.selected{color:var(--accent2);background:rgba(0,148,255,.08);}
 .acct-card.status-Passed::before,.acct-card.status-Payout-Pending::before{background:var(--win);}
 .acct-card.status-Active::before{background:var(--accent);}
 .acct-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;}
@@ -2169,15 +2192,22 @@ function renderStats(){
   document.getElementById('stat-pnl').className='stat-value '+(pnl>=0?'positive':'negative');
 }
 
+function allAccountNames(){
+  // Combine account profile names + preset/extra accounts, deduped
+  const names=new Set();
+  accountProfiles.forEach(a=>names.add(a.name));
+  allAccounts().forEach(a=>names.add(a));
+  return [...names].sort();
+}
 function renderAccountFilters(){
   const sel=document.getElementById('filter-account'),cur=sel.value;
   sel.innerHTML='<option value="">All Accounts</option>';
-  allAccounts().forEach(a=>{const o=document.createElement('option');o.value=a;o.textContent=a;if(a===cur)o.selected=true;sel.appendChild(o);});
+  allAccountNames().forEach(a=>{const o=document.createElement('option');o.value=a;o.textContent=a;if(a===cur)o.selected=true;sel.appendChild(o);});
 }
 function renderEvalAccountFilters(){
   const sel=document.getElementById('filter-account-eval'),cur=sel.value;
   sel.innerHTML='<option value="">All Accounts</option>';
-  allAccounts().forEach(a=>{const o=document.createElement('option');o.value=a;o.textContent=a;if(a===cur)o.selected=true;sel.appendChild(o);});
+  allAccountNames().forEach(a=>{const o=document.createElement('option');o.value=a;o.textContent=a;if(a===cur)o.selected=true;sel.appendChild(o);});
 }
 
 function renderTrades(mode){
@@ -2579,15 +2609,35 @@ function getChartLinks(mode){
 
 function buildAccountRowHTML(account,copies,idx,mode){
   const p=mode==='eval'?'ef':'f';
+  const rowId=`${p}-acc-row-${idx}`;
+  const pickerId=`${p}-acc-picker-${idx}`;
+  const hiddenId=`${p}-acc-val-${idx}`;
+  const label=account||'— Select Account —';
 
-  // Build options: account profiles grouped by firm, then preset accounts as fallback
-  let optionsHTML='<option value="">— Account —</option>';
+  return `<div class="account-row" id="${rowId}" style="display:grid;grid-template-columns:1fr 72px 32px;gap:6px;align-items:center;">
+    <div class="acct-picker" id="${pickerId}">
+      <button type="button" class="acct-picker-trigger" onclick="toggleAcctPicker('${pickerId}','${mode}')">
+        <span class="trigger-label" id="${pickerId}-label">${esc(label)}</span>
+        <span class="trigger-arrow">▾</span>
+      </button>
+      <div class="acct-picker-dropdown" id="${pickerId}-drop"></div>
+      <input type="hidden" class="acc-row-select" id="${hiddenId}" value="${esc(account||'')}">
+    </div>
+    <input type="number" class="acc-row-copies" min="1" value="${copies||1}" oninput="updateMultiPreview('${mode}')" placeholder="×" title="Copies" style="background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:8px 6px;color:#f6c90e;font-family:var(--mono);font-size:12px;outline:none;width:100%;text-align:center;">
+    <button onclick="removeAccountRow('${rowId}','${mode}')" style="background:transparent;border:1px solid var(--border2);color:var(--text3);border-radius:5px;padding:5px 7px;cursor:pointer;font-size:12px;line-height:1;" title="Remove">✕</button>
+  </div>`;
+}
 
-  if(accountProfiles.length){
-    // Only show non-blown accounts
-    const activeProfiles=accountProfiles.filter(a=>a.status!=='Blown');
+function buildAcctPickerDropdown(pickerId, currentVal, mode){
+  const drop=document.getElementById(`${pickerId}-drop`);
+  if(!drop) return;
+  const activeProfiles=accountProfiles.filter(a=>a.status!=='Blown');
+  const profileNames=new Set(accountProfiles.map(a=>a.name.toLowerCase()));
+  const extraOpts=[...PRESET_ACCOUNTS,...extraAccounts].filter(a=>!profileNames.has(a.toLowerCase()));
+  let html='';
 
-    // Group profiles by firm
+  if(activeProfiles.length){
+    // Group by firm
     const firmMap={};
     activeProfiles.forEach(a=>{
       const firm=a.firm||'Other';
@@ -2595,37 +2645,75 @@ function buildAccountRowHTML(account,copies,idx,mode){
       firmMap[firm].push(a);
     });
     Object.keys(firmMap).sort().forEach(firm=>{
-      optionsHTML+=`<optgroup label="${esc(firm)}">`;
+      const firmSelected=firmMap[firm].some(a=>a.name===currentVal);
+      html+=`<div class="acct-picker-firm ${firmSelected?'selected':''}" onclick="selectAcctPickerFirm(event,'${pickerId}','${esc(firm)}','${mode}')">
+        <span>${esc(firm)}</span><span class="firm-check">✓</span>
+      </div>`;
       firmMap[firm].forEach(a=>{
-        optionsHTML+=`<option value="${esc(a.name)}" ${account===a.name?'selected':''}>${esc(a.name)}</option>`;
+        const sel=a.name===currentVal;
+        html+=`<div class="acct-picker-account ${sel?'selected':''}" onclick="selectAcctPickerVal('${pickerId}','${esc(a.name)}','${mode}')">
+          <span>${esc(a.name)}</span><span class="acct-check">✓</span>
+        </div>`;
       });
-      optionsHTML+=`</optgroup>`;
-    });
-    // Add preset accounts not already covered by profiles
-    const profileNames=new Set(accountProfiles.map(a=>a.name.toLowerCase()));
-    const extraOpts=[...PRESET_ACCOUNTS,...extraAccounts].filter(a=>!profileNames.has(a.toLowerCase()));
-    if(extraOpts.length){
-      optionsHTML+=`<optgroup label="── Other Accounts ──">`;
-      extraOpts.forEach(a=>{
-        optionsHTML+=`<option value="${esc(a)}" ${account===a?'selected':''}>${esc(a)}</option>`;
-      });
-      optionsHTML+=`</optgroup>`;
-    }
-  } else {
-    // No profiles yet — fall back to preset + extra accounts
-    allAccounts().forEach(a=>{
-      optionsHTML+=`<option value="${esc(a)}" ${account===a?'selected':''}>${esc(a)}</option>`;
     });
   }
 
-  return `<div class="account-row" id="${p}-acc-row-${idx}" style="display:grid;grid-template-columns:1fr 72px 32px;gap:6px;align-items:center;">
-    <select class="acc-row-select" onchange="updateMultiPreview('${mode}')" style="background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:8px 9px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;width:100%;">
-      ${optionsHTML}
-    </select>
-    <input type="number" class="acc-row-copies" min="1" value="${copies||1}" oninput="updateMultiPreview('${mode}')" placeholder="×" title="Copies" style="background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:8px 6px;color:#f6c90e;font-family:var(--mono);font-size:12px;outline:none;width:100%;text-align:center;">
-    <button onclick="removeAccountRow('${p}-acc-row-${idx}','${mode}')" style="background:transparent;border:1px solid var(--border2);color:var(--text3);border-radius:5px;padding:5px 7px;cursor:pointer;font-size:12px;line-height:1;" title="Remove">✕</button>
-  </div>`;
+  if(extraOpts.length){
+    if(activeProfiles.length) html+=`<div class="acct-picker-sep"></div>`;
+    html+=`<div class="acct-picker-firm" style="cursor:default;">Other Accounts</div>`;
+    extraOpts.forEach(a=>{
+      const sel=a===currentVal;
+      html+=`<div class="acct-picker-other ${sel?'selected':''}" onclick="selectAcctPickerVal('${pickerId}','${esc(a)}','${mode}')">${esc(a)}</div>`;
+    });
+  }
+
+  if(!html) html=`<div style="padding:12px;font-size:11px;color:var(--text3);text-align:center;">No accounts yet — add one in Accounts tab</div>`;
+  drop.innerHTML=html;
 }
+
+function toggleAcctPicker(pickerId, mode){
+  const drop=document.getElementById(`${pickerId}-drop`);
+  const trigger=document.querySelector(`#${pickerId} .acct-picker-trigger`);
+  const isOpen=drop.classList.contains('open');
+  // Close all other pickers first
+  document.querySelectorAll('.acct-picker-dropdown.open').forEach(d=>{
+    d.classList.remove('open');
+    d.closest('.acct-picker')?.querySelector('.acct-picker-trigger')?.classList.remove('open');
+  });
+  if(!isOpen){
+    const hidden=document.querySelector(`#${pickerId} .acc-row-select`);
+    buildAcctPickerDropdown(pickerId, hidden?.value||'', mode);
+    drop.classList.add('open');
+    trigger?.classList.add('open');
+  }
+}
+
+function selectAcctPickerFirm(e, pickerId, firm, mode){
+  // Clicking the firm row selects the firm itself as the value
+  e.stopPropagation();
+  selectAcctPickerVal(pickerId, firm, mode);
+}
+
+function selectAcctPickerVal(pickerId, val, mode){
+  const hidden=document.querySelector(`#${pickerId} .acc-row-select`);
+  const label=document.getElementById(`${pickerId}-label`);
+  if(hidden) hidden.value=val;
+  if(label) label.textContent=val||'— Select Account —';
+  // Close dropdown
+  document.getElementById(`${pickerId}-drop`)?.classList.remove('open');
+  document.querySelector(`#${pickerId} .acct-picker-trigger`)?.classList.remove('open');
+  updateMultiPreview(mode);
+}
+
+// Close pickers when clicking outside
+document.addEventListener('click', e=>{
+  if(!e.target.closest('.acct-picker')){
+    document.querySelectorAll('.acct-picker-dropdown.open').forEach(d=>{
+      d.classList.remove('open');
+      d.closest('.acct-picker')?.querySelector('.acct-picker-trigger')?.classList.remove('open');
+    });
+  }
+});
 
 function addAccountRow(mode){
   const p=mode==='eval'?'ef':'f';
@@ -4002,6 +4090,8 @@ async function saveAcct(){
   else accountProfiles.push(entry);
   closeAcctForm();
   renderAccounts();
+  renderAccountFilters();
+  renderEvalAccountFilters();
   await saveData('Save account profile');
   showToast('✅ Account saved!','success');
 }
