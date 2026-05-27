@@ -4154,60 +4154,52 @@ function getAcctStats(acct){
   const sortedDays=Object.keys(dayMap).sort();
   let runningBal=startBal;
   let eodPeak=startBal;
-  let trailingLocked=false;   // once true, the floor stays at lockedFloor
-  let maxDDReached=0;
+  let trailingLocked=false;
+  let currentFloor=startBal-maxDDAmt; // current trailing floor
   let todayDDfromPeak=0;
 
   sortedDays.forEach((day,idx)=>{
     const dayPnl=dayMap[day];
     const balAfterDay=runningBal+dayPnl;
 
-    // Determine effective floor for this day
-    let effectiveFloor;
-    if(trailingLocked){
-      // Trailing already stopped — floor is fixed
-      effectiveFloor=lockedFloor;
-    } else {
-      // Floor = eodPeak - maxDDAmt (trailing from yesterday's peak)
-      effectiveFloor=eodPeak-maxDDAmt;
-    }
-
-    // Drawdown used = how far below the effective floor we'd be
-    // (a negative value means we're above the floor — safe)
-    const ddThisDay=Math.max(0, effectiveFloor - balAfterDay + maxDDAmt);
-    // More precisely: drawdown from the peak that set this floor
-    const ddFromPeak=trailingLocked
-      ? Math.max(0, (runningBal>lockedFloor ? runningBal : lockedFloor) - balAfterDay)
-      : Math.max(0, eodPeak - balAfterDay);
-
-    if(ddFromPeak>maxDDReached) maxDDReached=ddFromPeak;
-
-    // Today's DD (last day only)
+    // Today's drawdown = distance from current floor's ceiling (the peak that set this floor)
+    // while trailing is active, that's how far below the eodPeak we closed
     if(idx===sortedDays.length-1){
-      todayDDfromPeak=trailingLocked
-        ? Math.max(0, lockedFloor+maxDDAmt - balAfterDay)
-        : Math.max(0, eodPeak - balAfterDay);
+      if(trailingLocked){
+        todayDDfromPeak=Math.max(0, (lockedFloor+maxDDAmt) - balAfterDay);
+      } else {
+        todayDDfromPeak=Math.max(0, eodPeak - balAfterDay);
+      }
     }
 
     runningBal=balAfterDay;
 
-    // Update EOD peak — but only if trailing hasn't locked yet
+    // Update EOD peak and trailing floor (only while not locked)
     if(!trailingLocked && runningBal>eodPeak){
       eodPeak=runningBal;
-      // Check if we've hit the lock threshold
+      currentFloor=eodPeak-maxDDAmt;
       if(eodPeak>=trailingLockThreshold){
         trailingLocked=true;
-        eodPeak=trailingLockThreshold; // cap it at threshold for display
+        eodPeak=trailingLockThreshold;
+        currentFloor=lockedFloor;
       }
     }
   });
 
+  // Current drawdown used = how far current balance is below the peak
+  // This is what matters: if you're profitable, this shrinks
+  const currentDrawdownUsed = trailingLocked
+    ? Math.max(0, (lockedFloor+maxDDAmt) - runningBal)
+    : Math.max(0, eodPeak - runningBal);
+
+  const currentFloorFinal = trailingLocked ? lockedFloor : currentFloor;
+
   const currentPnl=runningBal-startBal;
   const currentBalance=runningBal;
 
-  const maxDDUsedPct=maxDDAmt>0?Math.min(100,(maxDDReached/maxDDAmt)*100):0;
+  const maxDDUsedPct=maxDDAmt>0?Math.min(100,(currentDrawdownUsed/maxDDAmt)*100):0;
   const todayDDPct=dailyDDAmt>0?Math.min(100,(todayDDfromPeak/dailyDDAmt)*100):0;
-  const maxDDRemaining=Math.max(0,maxDDAmt-maxDDReached);
+  const maxDDRemaining=Math.max(0,maxDDAmt-currentDrawdownUsed);
   const dailyDDRemaining=Math.max(0,dailyDDAmt-todayDDfromPeak);
 
   const profitTargetAmt=startBal*(acct.profitTarget/100);
@@ -4221,7 +4213,8 @@ function getAcctStats(acct){
     linked,currentPnl,currentBalance,
     profitTargetAmt,profitProgress,
     maxDDAmt,dailyDDAmt,
-    drawdownUsed:maxDDReached,
+    drawdownUsed:currentDrawdownUsed,
+    currentFloor:currentFloorFinal,
     maxDDUsedPct,
     todayDDfromPeak,todayDDPct,
     maxDDRemaining,dailyDDRemaining,
@@ -4339,10 +4332,10 @@ function renderAccounts(){
         <div class="acct-bar-label">
           <span style="color:${s.trailingLocked?'var(--win)':ddColor}">
             📉 Trailing Max DD (${a.maxDD}%)
-            <span style="font-size:9px;opacity:.7;">${s.trailingLocked?'🔒 locked at '+fmtMoney(s.lockedFloor):'EOD method'}</span>
+            <span style="font-size:9px;opacity:.7;">${s.trailingLocked?'🔒 locked at '+fmtMoney(s.lockedFloor):'floor: '+fmtMoney(s.currentFloor)}</span>
           </span>
           <span style="color:${s.trailingLocked?'var(--win)':ddColor}">
-            ${s.trailingLocked?`Floor fixed · ${fmtMoney(s.drawdownUsed)} / ${fmtMoney(s.maxDDAmt)}`:`${s.maxDDUsedPct.toFixed(1)}% used · ${fmtMoney(s.drawdownUsed)} / ${fmtMoney(s.maxDDAmt)}`}
+            ${s.trailingLocked?`Floor fixed · used ${fmtMoney(s.drawdownUsed)} / ${fmtMoney(s.maxDDAmt)}`:`${s.maxDDUsedPct.toFixed(1)}% used · ${fmtMoney(s.drawdownUsed)} / ${fmtMoney(s.maxDDAmt)}`}
           </span>
         </div>
         <div class="acct-bar-track">
