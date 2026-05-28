@@ -1126,7 +1126,7 @@ select option{background:#111318;}
       <div class="section-title">💜 Payouts Received <span></span></div>
       <div class="exp-table-wrap">
         <table class="exp-table">
-          <thead><tr><th>Date</th><th>Prop Firm</th><th>Amount</th><th>Notes</th><th></th></tr></thead>
+          <thead><tr><th>Date</th><th>Prop Firm</th><th>Linked Account</th><th>Amount</th><th>Notes</th><th></th></tr></thead>
           <tbody id="payout-tbody"></tbody>
         </table>
         <div class="exp-empty" id="payout-empty">No payouts recorded yet.</div>
@@ -1399,6 +1399,13 @@ select option{background:#111318;}
     <div class="field">
       <label>Amount ($)</label>
       <input type="number" id="fin-amount" placeholder="150.00" step="0.01">
+    </div>
+    <!-- Payout only: link to a specific account profile -->
+    <div id="fin-account-row" style="display:none;margin-bottom:13px;">
+      <label style="display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:5px;">Linked Account <span style="color:var(--text3);font-size:9px;">(deducted from account balance)</span></label>
+      <select id="fin-linked-account" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:9px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;">
+        <option value="">— Select Account (optional) —</option>
+      </select>
     </div>
     <div class="field">
       <label>Notes (optional)</label>
@@ -2363,6 +2370,7 @@ function renderFinances(){
     payTbody.innerHTML=payouts.map(p=>`<tr>
       <td style="font-family:var(--mono);font-size:11px;">${fmtDate(p.date)}</td>
       <td><span class="exp-payout-tag">${esc(p.firm)}</span></td>
+      <td>${p.linkedAccount?`<span class="account-tag" style="font-size:10px;">${esc(p.linkedAccount)}</span>`:'<span style="color:var(--text3);font-size:11px;">—</span>'}</td>
       <td><span class="payout-amount">+${fmtMoney(p.amount)}</span></td>
       <td style="color:var(--text2);font-size:11px;">${esc(p.notes||'—')}</td>
       <td><button class="exp-btn-del" onclick="deleteFinance('${p.id}')">🗑</button></td>
@@ -2377,14 +2385,28 @@ function setFinType(type){
   const isExp=type==='expense';
   document.getElementById('fin-qty-row').style.display=isExp?'block':'none';
   document.getElementById('fin-size-row').style.display=isExp?'block':'none';
+  document.getElementById('fin-account-row').style.display=isExp?'none':'block';
+  // Populate account selector with non-blown account profiles
+  if(!isExp){
+    const sel=document.getElementById('fin-linked-account');
+    const cur=sel.value;
+    sel.innerHTML='<option value="">— Select Account (optional) —</option>';
+    accountProfiles.filter(a=>a.status!=='Blown').forEach(a=>{
+      const opt=document.createElement('option');
+      opt.value=a.name;
+      opt.textContent=`${a.name} (${a.firm||'—'})`;
+      if(a.name===cur) opt.selected=true;
+      sel.appendChild(opt);
+    });
+  }
 }
 function handleFinFirmChange(){
   const v=document.getElementById('fin-firm').value;
   document.getElementById('fin-firm-custom').style.display=v==='__custom__'?'block':'none';
 }
-function openFinanceForm(){
+function openFinanceForm(type){
   editingFinId=null;
-  setFinType('expense');
+  setFinType(type||'expense');
   document.getElementById('fin-modal-title').textContent='＋ Add Finance Entry';
   document.getElementById('fin-date').value=today();
   document.getElementById('fin-firm').value='';
@@ -2393,6 +2415,7 @@ function openFinanceForm(){
   document.getElementById('fin-qty').value=1;
   document.getElementById('fin-size').value='';
   document.getElementById('fin-amount').value='';
+  document.getElementById('fin-linked-account').value='';
   document.getElementById('fin-notes').value='';
   document.getElementById('finance-modal').classList.add('open');
 }
@@ -2404,20 +2427,25 @@ async function saveFinance(){
   const qty=parseInt(document.getElementById('fin-qty').value)||1;
   const accountSize=document.getElementById('fin-size').value||'';
   const amount=parseFloat(document.getElementById('fin-amount').value)||0;
+  const linkedAccount=currentFinType==='payout'?(document.getElementById('fin-linked-account').value||''):'';
   const notes=document.getElementById('fin-notes').value.trim();
   if(!date||!firm||!amount){showToast('Date, firm and amount are required','error');return;}
-  const entry={id:editingFinId||uid(),type:currentFinType,date,firm,qty:currentFinType==='expense'?qty:1,accountSize:currentFinType==='expense'?accountSize:'',amount,notes,createdAt:new Date().toISOString()};
+  const entry={id:editingFinId||uid(),type:currentFinType,date,firm,qty:currentFinType==='expense'?qty:1,accountSize:currentFinType==='expense'?accountSize:'',amount,linkedAccount,notes,createdAt:new Date().toISOString()};
   if(editingFinId){const idx=finances.findIndex(f=>f.id===editingFinId);if(idx!==-1)finances[idx]=entry;}
   else finances.unshift(entry);
   closeFinanceForm();
   renderFinances();renderStats();
+  // Refresh account cards if a payout was linked to an account
+  if(currentFinType==='payout') renderAccounts();
   await saveData(`Add ${currentFinType} ${firm}`);
   showToast(`✅ ${currentFinType==='expense'?'Expense':'Payout'} saved!`,'success');
 }
 async function deleteFinance(id){
   if(!confirm('Delete this entry?'))return;
+  const entry=finances.find(f=>f.id===id);
   finances=finances.filter(f=>f.id!==id);
   renderFinances();renderStats();
+  if(entry?.type==='payout'&&entry?.linkedAccount) renderAccounts();
   await saveData('Delete finance entry');
   showToast('🗑 Deleted');
 }
@@ -4143,6 +4171,15 @@ function getAcctStats(acct){
   const trailingLockThreshold = startBal + maxDDAmt + 100;
   const lockedFloor = startBal + 100; // floor once trailing stops
 
+  // ── Payouts linked to this account ───────────────────
+  // Payouts are deducted from the running balance (withdrawn profits)
+  const linkedPayouts=finances.filter(f=>
+    f.type==='payout' &&
+    f.linkedAccount &&
+    f.linkedAccount.trim().toLowerCase()===acctNameLower
+  );
+  const totalPayouts=linkedPayouts.reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
+
   // Step 1: group trades by date
   const dayMap={};
   linked.forEach(t=>{
@@ -4194,6 +4231,9 @@ function getAcctStats(acct){
 
   const currentFloorFinal = trailingLocked ? lockedFloor : currentFloor;
 
+  // Deduct payouts from balance (money withdrawn from account)
+  runningBal -= totalPayouts;
+
   const currentPnl=runningBal-startBal;
   const currentBalance=runningBal;
 
@@ -4219,6 +4259,7 @@ function getAcctStats(acct){
     todayDDfromPeak,todayDDPct,
     maxDDRemaining,dailyDDRemaining,
     eodPeak,trailingLocked,trailingLockThreshold,lockedFloor,
+    totalPayouts,
     wins,wr,tradeCount:linked.length
   };
 }
@@ -4300,12 +4341,31 @@ function renderAccounts(){
           <div class="acct-stat-val">${s.tradeCount} · ${s.tradeCount?s.wr+'%':'—'}</div>
         </div>
         <div class="acct-stat">
+          <div class="acct-stat-label">Payouts Withdrawn</div>
+          <div class="acct-stat-val" style="color:${s.totalPayouts>0?'var(--payout)':'var(--text3)'}">
+            ${s.totalPayouts>0?'-'+fmtMoney(s.totalPayouts):'—'}
+          </div>
+        </div>
+        <div class="acct-stat">
+          <div class="acct-stat-label">Net After Payout</div>
+          <div class="acct-stat-val" style="color:${(s.currentPnl)>=0?'var(--win)':'var(--loss)'}">
+            ${fmtMoney(s.currentBalance)}
+          </div>
+        </div>
+      </div>
+
+      <div class="acct-pnl-row" style="margin-bottom:12px;">
+        <div class="acct-stat">
           <div class="acct-stat-label">Max DD Remaining</div>
           <div class="acct-stat-val" style="color:${ddDanger?'var(--loss)':ddWarn?'#f6c90e':'var(--win)'}">${fmtMoney(s.maxDDRemaining)}</div>
         </div>
         <div class="acct-stat">
           <div class="acct-stat-label">Daily DD Remaining</div>
           <div class="acct-stat-val" style="color:${dailyDanger?'var(--loss)':dailyWarn?'#f6c90e':'var(--win)'}">${fmtMoney(s.dailyDDRemaining)}</div>
+        </div>
+        <div class="acct-stat">
+          <div class="acct-stat-label">Current Floor</div>
+          <div class="acct-stat-val" style="color:var(--text2)">${fmtMoney(s.currentFloor)}</div>
         </div>
       </div>
 
@@ -4364,10 +4424,29 @@ function renderAccounts(){
 
       <div class="acct-card-actions">
         <button class="exp-btn-del" onclick="openAcctForm('${a.id}')" style="padding:5px 10px;font-size:11px;">✏ Edit</button>
+        <button class="exp-btn-del" onclick="openPayoutFromAcct('${esc(a.name)}','${esc(a.firm||'')}')" style="padding:5px 10px;font-size:11px;color:var(--payout);border-color:var(--payout);">💜 Add Payout</button>
         <button class="exp-btn-del" onclick="deleteAcct('${a.id}')" style="padding:5px 10px;font-size:11px;">🗑 Delete</button>
       </div>
     </div>`;
   }).join('');
+}
+
+function openPayoutFromAcct(accountName, firm){
+  openFinanceForm('payout');
+  // Pre-fill firm
+  const firmSel=document.getElementById('fin-firm');
+  const PRESET_FIRMS=['LUCID TRADING','APEX TRADER','MY FUNDED FUTURES','TRADEIFY','FUNDEDNEXT'];
+  if(PRESET_FIRMS.includes(firm)){
+    firmSel.value=firm;
+    document.getElementById('fin-firm-custom').style.display='none';
+  } else if(firm){
+    firmSel.value='__custom__';
+    document.getElementById('fin-firm-custom').style.display='block';
+    document.getElementById('fin-firm-custom').value=firm;
+  }
+  // Pre-select linked account
+  const acctSel=document.getElementById('fin-linked-account');
+  if(acctSel) acctSel.value=accountName;
 }
 
 // ── HELPERS ───────────────────────────────────────────────
