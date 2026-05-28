@@ -2659,43 +2659,25 @@ function buildAccountRowHTML(account,copies,idx,mode){
 function buildAcctPickerDropdown(pickerId, currentVal, mode){
   const drop=document.getElementById(`${pickerId}-drop`);
   if(!drop) return;
+
+  // Only show named account profiles that aren't blown
   const activeProfiles=accountProfiles.filter(a=>a.status!=='Blown');
-  const profileNames=new Set(accountProfiles.map(a=>a.name.toLowerCase()));
-  const extraOpts=[...PRESET_ACCOUNTS,...extraAccounts].filter(a=>!profileNames.has(a.toLowerCase()));
   let html='';
 
   if(activeProfiles.length){
-    // Group by firm
-    const firmMap={};
     activeProfiles.forEach(a=>{
-      const firm=a.firm||'Other';
-      if(!firmMap[firm]) firmMap[firm]=[];
-      firmMap[firm].push(a);
-    });
-    Object.keys(firmMap).sort().forEach(firm=>{
-      const firmSelected=firmMap[firm].some(a=>a.name===currentVal);
-      html+=`<div class="acct-picker-firm ${firmSelected?'selected':''}" onclick="selectAcctPickerFirm(event,'${pickerId}','${esc(firm)}','${mode}')">
-        <span>${esc(firm)}</span><span class="firm-check">✓</span>
+      const sel=a.name===currentVal;
+      html+=`<div class="acct-picker-account ${sel?'selected':''}" style="padding-left:12px;" onclick="selectAcctPickerVal('${pickerId}','${esc(a.name)}','${mode}')">
+        <span>${esc(a.name)}</span>
+        <span class="acct-check">✓</span>
       </div>`;
-      firmMap[firm].forEach(a=>{
-        const sel=a.name===currentVal;
-        html+=`<div class="acct-picker-account ${sel?'selected':''}" onclick="selectAcctPickerVal('${pickerId}','${esc(a.name)}','${mode}')">
-          <span>${esc(a.name)}</span><span class="acct-check">✓</span>
-        </div>`;
-      });
     });
+  } else {
+    html=`<div style="padding:14px 12px;font-size:11px;color:var(--text3);text-align:center;">
+      No accounts yet — add one in the<br><strong style="color:var(--accent2);">💼 Funded Trades → 🏦 Accounts</strong> tab
+    </div>`;
   }
 
-  if(extraOpts.length){
-    if(activeProfiles.length) html+=`<div class="acct-picker-sep"></div>`;
-    html+=`<div class="acct-picker-firm" style="cursor:default;">Other Accounts</div>`;
-    extraOpts.forEach(a=>{
-      const sel=a===currentVal;
-      html+=`<div class="acct-picker-other ${sel?'selected':''}" onclick="selectAcctPickerVal('${pickerId}','${esc(a)}','${mode}')">${esc(a)}</div>`;
-    });
-  }
-
-  if(!html) html=`<div style="padding:12px;font-size:11px;color:var(--text3);text-align:center;">No accounts yet — add one in Accounts tab</div>`;
   drop.innerHTML=html;
 }
 
@@ -2714,12 +2696,6 @@ function toggleAcctPicker(pickerId, mode){
     drop.classList.add('open');
     trigger?.classList.add('open');
   }
-}
-
-function selectAcctPickerFirm(e, pickerId, firm, mode){
-  // Clicking the firm row selects the firm itself as the value
-  e.stopPropagation();
-  selectAcctPickerVal(pickerId, firm, mode);
 }
 
 function selectAcctPickerVal(pickerId, val, mode){
