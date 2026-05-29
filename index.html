@@ -1213,12 +1213,21 @@ body.glass-mode #note-form-wrap{
 }
 
 /* ── Smooth mode transition ── */
-body, header, .stats-bar, .tab-nav, .trade-card, .right-panel,
+body, header, .stats-bar, .tab-nav, .trade-card,
 .exp-curve-stat, .bkd-stat, .fin-stat, .session-card, .dow-cell,
 .acct-sum-card, .note-card, .tbd-card, .cal-cell, .acct-card,
 .exp-canvas-wrap, .bkd-chart-wrap, .exp-table-wrap, .bkd-table-wrap,
 .modal, .cal-popup, .toast{
   transition:background .35s ease, border-color .35s ease, box-shadow .35s ease;
+}
+/* right-panel gets only bg/border transitions — transform is owned by the mobile sheet animation */
+.right-panel{
+  transition:background .35s ease, border-color .35s ease, box-shadow .35s ease;
+}
+@media(max-width:900px){
+  .right-panel{
+    transition:transform .32s cubic-bezier(.32,1,.6,1), background .35s ease, border-color .35s ease, box-shadow .35s ease;
+  }
 }
 </style>
 </head>
