@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradeLog — Offline</title>
+<style>
+  :root { --bg:#0a0c0f; --accent:#00e5a0; --text:#e2e8f0; --text2:#8899aa; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body {
+    background:var(--bg); color:var(--text);
+    font-family:'DM Sans',system-ui,sans-serif;
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    text-align:center; padding:24px;
+  }
+  .wrap { max-width:320px; }
+  .icon { font-size:56px; margin-bottom:20px; }
+  h1 { font-size:22px; font-weight:600; margin-bottom:10px; }
+  p { font-size:14px; color:var(--text2); line-height:1.7; margin-bottom:28px; }
+  button {
+    background:var(--accent); color:#000; border:none;
+    padding:12px 28px; border-radius:8px; font-size:14px;
+    font-weight:600; cursor:pointer;
+  }
+  button:active { opacity:.85; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="icon">📡</div>
+    <h1>You're offline</h1>
+    <p>TradeLog needs a connection to sync with GitHub. Your data is safe — reconnect and reopen to continue.</p>
+    <button onclick="location.reload()">Try again</button>
+  </div>
+</body>
+</html>
