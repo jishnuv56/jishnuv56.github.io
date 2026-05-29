@@ -1,60 +1,62 @@
 // ── Trading Journal Service Worker ──────────────────────────
-const CACHE_NAME = 'tradelog-v1';
+const CACHE_VERSION = 'tradelog-v3';
+const OFFLINE_URL = './offline.html';
+
 const SHELL_ASSETS = [
+  './',
   './index.html',
+  './manifest.json',
+  './offline.html',
   'https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@300;400;500;600&display=swap'
 ];
 
-// ── Install: cache the app shell ────────────────────────────
+// ── Install ──────────────────────────────────────────────────
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      console.log('[SW] Caching app shell');
-      return cache.addAll(SHELL_ASSETS);
-    }).then(() => self.skipWaiting())
+    caches.open(CACHE_VERSION)
+      .then(cache => cache.addAll(SHELL_ASSETS))
+      .then(() => self.skipWaiting())
   );
 });
 
-// ── Activate: clean up old caches ───────────────────────────
+// ── Activate ─────────────────────────────────────────────────
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
+    caches.keys()
+      .then(keys => Promise.all(
         keys
-          .filter(key => key !== CACHE_NAME)
-          .map(key => {
-            console.log('[SW] Deleting old cache:', key);
-            return caches.delete(key);
-          })
-      )
-    ).then(() => self.clients.claim())
+          .filter(key => key !== CACHE_VERSION)
+          .map(key => caches.delete(key))
+      ))
+      .then(() => self.clients.claim())
   );
 });
 
-// ── Fetch: strategy depends on request type ──────────────────
+// ── Fetch ────────────────────────────────────────────────────
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Always go network-first for GitHub API calls (trade data must be fresh)
+  // GitHub API — always network, offline error response
   if (url.hostname === 'api.github.com') {
     event.respondWith(
-      fetch(event.request)
-        .catch(() => new Response(
+      fetch(event.request).catch(() =>
+        new Response(
           JSON.stringify({ error: 'Offline — GitHub API unavailable' }),
-          { headers: { 'Content-Type': 'application/json' } }
-        ))
+          { status: 503, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
     );
     return;
   }
 
-  // For Google Fonts — cache first, network fallback
+  // Google Fonts — cache first
   if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
     event.respondWith(
       caches.match(event.request).then(cached => {
         if (cached) return cached;
         return fetch(event.request).then(response => {
           const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          caches.open(CACHE_VERSION).then(cache => cache.put(event.request, clone));
           return response;
         });
       })
@@ -62,36 +64,69 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // For the app shell (index.html and local assets) — cache first, then network
+  // App shell — cache first, network fallback, offline page last resort
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
 
-      return fetch(event.request).then(response => {
-        // Cache successful GET responses for app shell files
-        if (
-          response.ok &&
-          event.request.method === 'GET' &&
-          (url.origin === self.location.origin || url.hostname.includes('fonts'))
-        ) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-        }
-        return response;
-      }).catch(() => {
-        // Offline fallback — serve cached index.html for navigation requests
-        if (event.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
-        return new Response('Offline', { status: 503 });
-      });
+      return fetch(event.request)
+        .then(response => {
+          if (
+            response.ok &&
+            event.request.method === 'GET' &&
+            url.origin === self.location.origin
+          ) {
+            const clone = response.clone();
+            caches.open(CACHE_VERSION).then(cache => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => {
+          if (event.request.mode === 'navigate') {
+            return caches.match(OFFLINE_URL);
+          }
+          return new Response('Offline', { status: 503 });
+        });
     })
   );
 });
 
-// ── Background sync message handling ────────────────────────
-self.addEventListener('message', event => {
-  if (event.data === 'SKIP_WAITING') {
-    self.skipWaiting();
+// ── Push notifications (scaffold) ───────────────────────────
+self.addEventListener('push', event => {
+  const data = event.data?.json() ?? { title: 'TradeLog', body: 'New update available' };
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: './icons/icon-192.png',
+      badge: './icons/icon-96.png',
+      tag: 'tradelog-notification',
+      renotify: true
+    })
+  );
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      return clients.openWindow('./');
+    })
+  );
+});
+
+// ── Periodic background sync (scaffold) ─────────────────────
+self.addEventListener('periodicsync', event => {
+  if (event.tag === 'tradelog-sync') {
+    event.waitUntil(Promise.resolve());
   }
+});
+
+// ── Message handling ─────────────────────────────────────────
+self.addEventListener('message', event => {
+  if (event.data === 'SKIP_WAITING') self.skipWaiting();
 });
