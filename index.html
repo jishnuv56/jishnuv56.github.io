@@ -330,8 +330,9 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 2
 .cal-month{font-family:var(--mono);font-size:16px;font-weight:600;min-width:185px;text-align:center;}
 .cal-nav-btn{background:var(--surface);border:1px solid var(--border2);color:var(--text);padding:6px 13px;border-radius:6px;cursor:pointer;font-size:15px;transition:all .2s;}
 .cal-nav-btn:hover{border-color:var(--accent);color:var(--accent);}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr) 72px;gap:4px;}
 .cal-dow{text-align:center;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);padding:6px 0;}
+.cal-dow.week-col{background:rgba(255,255,255,.03);border-radius:5px;color:var(--accent);border:1px solid var(--border);}
 .cal-cell{min-height:88px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:6px;transition:border-color .2s;}
 .cal-cell.has-trades{cursor:pointer;}
 .cal-cell.has-trades:hover{border-color:var(--border2);background:var(--surface2);}
@@ -345,6 +346,70 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 2
 .cal-day-pnl{font-family:var(--mono);font-size:10px;font-weight:700;margin-top:4px;}
 .cal-day-pnl.positive{color:var(--win);}.cal-day-pnl.negative{color:var(--loss);}
 .cal-more{font-size:9px;color:var(--text3);}
+/* Weekly PNL cell */
+.cal-week-pnl{
+  min-height:88px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:7px;
+  padding:6px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  border-left:2px solid var(--border2);
+}
+.cal-week-pnl-label{font-size:8px;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);}
+.cal-week-pnl-val{font-family:var(--mono);font-size:11px;font-weight:700;text-align:center;}
+.cal-week-pnl-val.positive{color:var(--win);}
+.cal-week-pnl-val.negative{color:var(--loss);}
+.cal-week-pnl-trades{font-size:9px;color:var(--text3);}
+/* Monthly PNL summary bar */
+.cal-monthly-summary{
+  margin-top:12px;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:10px;
+  padding:14px 18px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.cal-monthly-summary-title{
+  font-size:10px;
+  letter-spacing:.8px;
+  text-transform:uppercase;
+  color:var(--text3);
+  font-weight:600;
+}
+.cal-monthly-stat{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:2px;
+}
+.cal-monthly-stat-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;}
+.cal-monthly-stat-val{font-family:var(--mono);font-size:14px;font-weight:700;}
+.cal-monthly-stat-val.positive{color:var(--win);}
+.cal-monthly-stat-val.negative{color:var(--loss);}
+.cal-monthly-divider{width:1px;height:32px;background:var(--border2);}
+/* Glass mode weekly/monthly */
+body.glass-mode .cal-week-pnl,
+body.glass-mode .cal-monthly-summary{
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+}
+body.glass-mode .cal-week-pnl{border-left:2px solid var(--accent);}
+[data-theme="pearl"] body.glass-mode .cal-week-pnl,
+[data-theme="pearl"] body.glass-mode .cal-monthly-summary{
+  background:rgba(255,255,255,.6);
+  border-color:rgba(255,255,255,.8);
+}
 
 /* Cal popup */
 .cal-popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;display:none;align-items:center;justify-content:center;}
@@ -762,6 +827,14 @@ select option{background:#111318;}
   .cal-header{flex-direction:column;align-items:flex-start;gap:8px;}
   .cal-month{font-size:13px;min-width:auto;}
   .cal-cell{min-height:44px;padding:3px 4px;border-radius:5px;}
+  .cal-grid{grid-template-columns:repeat(7,1fr) 48px;}
+  .cal-week-pnl{min-height:44px;padding:3px 4px;border-radius:5px;}
+  .cal-week-pnl-label{display:none;}
+  .cal-week-pnl-val{font-size:9px;}
+  .cal-week-pnl-trades{display:none;}
+  .cal-monthly-summary{padding:10px 12px;gap:8px;}
+  .cal-monthly-stat-val{font-size:12px;}
+  .cal-monthly-divider{height:24px;}
   .cal-day-num{font-size:10px;margin-bottom:2px;}
   .cal-trade-pip{display:none;}
   .cal-day-pnl{font-size:9px;}
@@ -1471,6 +1544,7 @@ body.glass-mode #stats-pill{
         <button class="btn-add" onclick="switchTab('list');showNewTradeForm('live')">＋ New Trade</button>
       </div>
       <div class="cal-grid" id="cal-grid"></div>
+      <div class="cal-monthly-summary" id="cal-monthly-summary"></div>
     </div>
   </div>
 
@@ -1486,6 +1560,7 @@ body.glass-mode #stats-pill{
         <button class="btn-add" style="background:var(--payout);" onclick="switchTab('evaljournal');showNewTradeForm('eval')">＋ New Eval Trade</button>
       </div>
       <div class="cal-grid" id="eval-cal-grid"></div>
+      <div class="cal-monthly-summary" id="eval-cal-monthly-summary"></div>
     </div>
   </div>
 
@@ -2764,27 +2839,118 @@ function renderCalendar(mode){
   const yr=isEval?evalCalYear:calYear, mo=isEval?evalCalMonth:calMonth;
   const labelId=isEval?'eval-cal-month-label':'cal-month-label';
   const gridId=isEval?'eval-cal-grid':'cal-grid';
+  const summaryId=isEval?'eval-cal-monthly-summary':'cal-monthly-summary';
   document.getElementById(labelId).textContent=`${MONTHS[mo]} ${yr}`;
   const firstDay=new Date(yr,mo,1).getDay();
   const daysInMonth=new Date(yr,mo+1,0).getDate();
   const daysInPrev=new Date(yr,mo,0).getDate();
   const todayStr=today();
+
+  // Build date → trades map
   const byDate={};
   src.forEach(t=>{if(!byDate[t.date])byDate[t.date]=[];byDate[t.date].push(t);});
+
+  // ── Build grid with weekly PNL column ──
+  // Header row: 7 day labels + week label
   let html=DAYS.map(d=>`<div class="cal-dow">${d}</div>`).join('');
-  for(let i=0;i<firstDay;i++){const d=daysInPrev-firstDay+1+i;html+=`<div class="cal-cell other-month"><div class="cal-day-num">${d}</div></div>`;}
+  html+=`<div class="cal-dow week-col">Week</div>`;
+
+  // Track for monthly totals
+  let monthPnl=0, monthTrades=0, monthWins=0, monthBestWeek=-Infinity, monthWorstWeek=Infinity;
+
+  // Render weeks row by row
+  let col=0;
+  let weekPnl=0, weekTrades=0;
+
+  // Leading empty cells (prev month)
+  for(let i=0;i<firstDay;i++){
+    const d=daysInPrev-firstDay+1+i;
+    html+=`<div class="cal-cell other-month"><div class="cal-day-num">${d}</div></div>`;
+    col++;
+  }
+
   for(let d=1;d<=daysInMonth;d++){
     const ds=`${yr}-${String(mo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const dt=byDate[ds]||[],isToday=ds===todayStr,hasTrades=dt.length>0;
+    const dt=byDate[ds]||[], isToday=ds===todayStr, hasTrades=dt.length>0;
     const dayPnl=dt.reduce((s,t)=>s+(parseFloat(t.pnl)*(parseInt(t.copies)||1)||0),0);
+    const dayWins=dt.filter(t=>t.result==='W').length;
+
+    // Accumulate
+    weekPnl+=dayPnl;
+    weekTrades+=dt.length;
+    monthPnl+=dayPnl;
+    monthTrades+=dt.length;
+    monthWins+=dayWins;
+
     let pipsHtml=dt.slice(0,2).map(t=>`<div class="cal-trade-pip ${t.result}">${esc(t.asset)}</div>`).join('');
     if(dt.length>2)pipsHtml+=`<div class="cal-more">+${dt.length-2} more</div>`;
     const pnlHtml=hasTrades?`<div class="cal-day-pnl ${dayPnl>=0?'positive':'negative'}">${fmtPnl(dayPnl)}</div>`:'';
     html+=`<div class="cal-cell ${isToday?'today':''} ${hasTrades?'has-trades':''}" ${hasTrades?`onclick="openCalPopup('${ds}','${mode}')"`:''}><div class="cal-day-num">${d}</div>${pipsHtml}${pnlHtml}</div>`;
+    col++;
+
+    // End of week (Saturday) or last day → add weekly PNL cell
+    const isSat = (firstDay + d - 1) % 7 === 6;
+    const isLastDay = d === daysInMonth;
+    if(isSat || isLastDay){
+      if(weekPnl > monthBestWeek) monthBestWeek = weekPnl;
+      if(weekPnl < monthWorstWeek) monthWorstWeek = weekPnl;
+      const wCls = weekPnl>=0?'positive':'negative';
+      const wLabel = weekTrades>0 ? fmtPnl(weekPnl) : '—';
+      html+=`<div class="cal-week-pnl">
+        <div class="cal-week-pnl-label">Week</div>
+        <div class="cal-week-pnl-val ${weekTrades>0?wCls:''}">${wLabel}</div>
+        ${weekTrades>0?`<div class="cal-week-pnl-trades">${weekTrades}T</div>`:''}
+      </div>`;
+      weekPnl=0; weekTrades=0; col=0;
+    }
   }
-  const rem=(firstDay+daysInMonth)%7===0?0:7-(firstDay+daysInMonth)%7;
-  for(let d=1;d<=rem;d++)html+=`<div class="cal-cell other-month"><div class="cal-day-num">${d}</div></div>`;
+
+  // Trailing empty cells to fill last row
+  const cellsInLastRow = col % 7;
+  if(cellsInLastRow > 0){
+    const rem = 7 - cellsInLastRow;
+    for(let d=1;d<=rem;d++){
+      html+=`<div class="cal-cell other-month"><div class="cal-day-num">${d}</div></div>`;
+    }
+    // Week PNL for partial last row (already added above for isLastDay)
+  }
+
   document.getElementById(gridId).innerHTML=html;
+
+  // ── Monthly Summary Bar ──
+  const wr = monthTrades>0 ? Math.round((monthWins/monthTrades)*100) : 0;
+  const mCls = monthPnl>=0?'positive':'negative';
+  const bwCls = monthBestWeek>=0?'positive':'negative';
+  const wwCls = monthWorstWeek>=0?'positive':'negative';
+  const summaryEl = document.getElementById(summaryId);
+  if(summaryEl){
+    summaryEl.innerHTML=`
+      <div class="cal-monthly-stat">
+        <div class="cal-monthly-stat-label">${MONTHS[mo]} PNL</div>
+        <div class="cal-monthly-stat-val ${mCls}">${monthTrades>0?fmtPnl(monthPnl):'—'}</div>
+      </div>
+      <div class="cal-monthly-divider"></div>
+      <div class="cal-monthly-stat">
+        <div class="cal-monthly-stat-label">Trades</div>
+        <div class="cal-monthly-stat-val">${monthTrades}</div>
+      </div>
+      <div class="cal-monthly-divider"></div>
+      <div class="cal-monthly-stat">
+        <div class="cal-monthly-stat-label">Win Rate</div>
+        <div class="cal-monthly-stat-val ${monthWins>0?'positive':''}">${monthTrades>0?wr+'%':'—'}</div>
+      </div>
+      <div class="cal-monthly-divider"></div>
+      <div class="cal-monthly-stat">
+        <div class="cal-monthly-stat-label">Best Week</div>
+        <div class="cal-monthly-stat-val ${monthBestWeek!==-Infinity?bwCls:''}">${monthBestWeek!==-Infinity?fmtPnl(monthBestWeek):'—'}</div>
+      </div>
+      <div class="cal-monthly-divider"></div>
+      <div class="cal-monthly-stat">
+        <div class="cal-monthly-stat-label">Worst Week</div>
+        <div class="cal-monthly-stat-val ${monthWorstWeek!==Infinity?wwCls:''}">${monthWorstWeek!==Infinity?fmtPnl(monthWorstWeek):'—'}</div>
+      </div>
+    `;
+  }
 }
 
 function openCalPopup(dateStr,mode){
