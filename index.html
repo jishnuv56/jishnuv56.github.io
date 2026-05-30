@@ -2922,6 +2922,17 @@ function renderCalendar(mode){
       if(weekPnl < monthWorstWeek) monthWorstWeek = weekPnl;
       const wCls = weekPnl>=0?'positive':'negative';
       const wLabel = weekTrades>0 ? fmtPnl(weekPnl) : '—';
+
+      // For partial last week: fill remaining day columns with empty cells FIRST
+      // so the week PNL cell always sits in the 8th (rightmost) column
+      if(isLastDay && !isSat){
+        const daysUsed = col % 7; // how many day cols filled in this row
+        const emptyNeeded = daysUsed === 0 ? 0 : 7 - daysUsed;
+        for(let e=0;e<emptyNeeded;e++){
+          html+=`<div class="cal-cell other-month"><div class="cal-day-num"></div></div>`;
+        }
+      }
+
       html+=`<div class="cal-week-pnl">
         <div class="cal-week-pnl-label">Week</div>
         <div class="cal-week-pnl-val ${weekTrades>0?wCls:''}">${wLabel}</div>
@@ -2929,16 +2940,6 @@ function renderCalendar(mode){
       </div>`;
       weekPnl=0; weekTrades=0; col=0;
     }
-  }
-
-  // Trailing empty cells to fill last row
-  const cellsInLastRow = col % 7;
-  if(cellsInLastRow > 0){
-    const rem = 7 - cellsInLastRow;
-    for(let d=1;d<=rem;d++){
-      html+=`<div class="cal-cell other-month"><div class="cal-day-num">${d}</div></div>`;
-    }
-    // Week PNL for partial last row (already added above for isLastDay)
   }
 
   document.getElementById(gridId).innerHTML=html;
