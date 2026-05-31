@@ -3698,10 +3698,7 @@ function showDetail(id,mode){
       </div>
     </div>`:''}
     ${t.notes?`<div style="margin-bottom:12px;"><div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">Notes</div><div class="notes-box"><p>${esc(t.notes).replace(/\n/g,'<br>')}</p></div></div>`:''}
-    <div style="display:flex;gap:8px;margin-top:4px;">
-      <button class="btn-edit" style="flex:1;border-color:${accentColor};color:${accentColor};" onclick="editTrade('${t.id}','${mode}')">✏ Edit Trade</button>
-      <button class="btn-export-trade" onclick="openExportModal('trade','${t.id}','${mode}')">📤 Share</button>
-    </div>
+    <button class="btn-edit" style="border-color:${accentColor};color:${accentColor};" onclick="editTrade('${t.id}','${mode}')">✏ Edit Trade</button>
   `;
   openBottomSheet(panel);
 }
@@ -5362,7 +5359,7 @@ let exportWeekOffset = 0; // weeks relative to the last-trade week
 function openExportModal(type, tradeId, mode){
   exportMode = mode || 'live';
   exportTradeId = tradeId;
-  exportType = type;
+  exportType = (type === 'trade') ? 'weekly' : type;
   // Capture calendar context so weekly/monthly use the viewed month, not today
   const yr = exportMode==='eval' ? evalCalYear : calYear;
   const mo = exportMode==='eval' ? evalCalMonth : calMonth;
@@ -5371,7 +5368,7 @@ function openExportModal(type, tradeId, mode){
   exportWeekOffset = 0;
   document.getElementById('export-modal-overlay').style.display = 'flex';
   document.getElementById('export-share-btn').style.display = navigator.share ? 'flex' : 'none';
-  ['trade','weekly','monthly'].forEach(t => {
+  ['weekly','monthly'].forEach(t => {
     document.getElementById('exp-btn-'+t).classList.toggle('active', t === type);
   });
   document.getElementById('export-week-nav').style.display = type==='weekly' ? 'flex' : 'none';
@@ -5385,11 +5382,11 @@ function closeExportModal(){
 
 function setExportType(type){
   exportType = type;
-  ['trade','weekly','monthly'].forEach(t => {
+  ['weekly','monthly'].forEach(t => {
     document.getElementById('exp-btn-'+t).classList.toggle('active', t === type);
   });
-  document.getElementById('export-week-nav').style.display = type==='weekly' ? 'flex' : 'none';
-  if(type==='weekly') updateExportWeekLabel();
+  document.getElementById('export-week-nav').style.display = exportType==='weekly' ? 'flex' : 'none';
+  if(exportType==='weekly') updateExportWeekLabel();
   generateExportImage();
 }
 
@@ -5458,7 +5455,6 @@ function generateExportImage(){
   setTimeout(() => {
     try {
       let canvas;
-      if(exportType === 'trade')   canvas = drawTradeReport();
       if(exportType === 'weekly')  canvas = drawWeeklyReport();
       if(exportType === 'monthly') canvas = drawMonthlyReport();
       if(!canvas){ preview.innerHTML = '<span class="export-preview-loading">No data to display</span>'; return; }
@@ -5826,12 +5822,8 @@ async function shareExportImage(){
       <span id="export-week-label" style="font-size:11px;font-family:var(--mono);color:var(--text2);">This Week</span>
       <button onclick="shiftExportWeek(1)" style="background:none;border:none;color:var(--text2);font-size:18px;cursor:pointer;padding:0 6px;">›</button>
     </div>
-    <div class="export-type-grid">
-      <div class="export-type-btn active" id="exp-btn-trade" onclick="setExportType('trade')">
-        <span class="export-type-icon">📊</span>
-        <span class="export-type-label">Single Trade</span>
-      </div>
-      <div class="export-type-btn" id="exp-btn-weekly" onclick="setExportType('weekly')">
+    <div class="export-type-grid" style="grid-template-columns:1fr 1fr;">
+      <div class="export-type-btn active" id="exp-btn-weekly" onclick="setExportType('weekly')">
         <span class="export-type-icon">📅</span>
         <span class="export-type-label">Weekly</span>
       </div>
