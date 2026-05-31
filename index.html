@@ -5355,16 +5355,27 @@ let exportType = 'trade';
 let exportTradeId = null;
 let exportMode = 'live';
 let exportCanvas = null;
+let exportCalYear = new Date().getFullYear();
+let exportCalMonth = new Date().getMonth();
+let exportWeekOffset = 0; // weeks relative to the last-trade week
 
 function openExportModal(type, tradeId, mode){
   exportMode = mode || 'live';
   exportTradeId = tradeId;
   exportType = type;
+  // Capture calendar context so weekly/monthly use the viewed month, not today
+  const yr = exportMode==='eval' ? evalCalYear : calYear;
+  const mo = exportMode==='eval' ? evalCalMonth : calMonth;
+  exportCalYear = yr;
+  exportCalMonth = mo;
+  exportWeekOffset = 0;
   document.getElementById('export-modal-overlay').style.display = 'flex';
   document.getElementById('export-share-btn').style.display = navigator.share ? 'flex' : 'none';
   ['trade','weekly','monthly'].forEach(t => {
     document.getElementById('exp-btn-'+t).classList.toggle('active', t === type);
   });
+  document.getElementById('export-week-nav').style.display = type==='weekly' ? 'flex' : 'none';
+  if(type==='weekly') updateExportWeekLabel();
   generateExportImage();
 }
 
@@ -5377,6 +5388,8 @@ function setExportType(type){
   ['trade','weekly','monthly'].forEach(t => {
     document.getElementById('exp-btn-'+t).classList.toggle('active', t === type);
   });
+  document.getElementById('export-week-nav').style.display = type==='weekly' ? 'flex' : 'none';
+  if(type==='weekly') updateExportWeekLabel();
   generateExportImage();
 }
 
@@ -5410,6 +5423,33 @@ function roundRect(ctx, x, y, w, h, r){
   ctx.lineTo(x, y+r);
   ctx.quadraticCurveTo(x, y, x+r, y);
   ctx.closePath();
+}
+
+function shiftExportWeek(dir){
+  exportWeekOffset += dir;
+  updateExportWeekLabel();
+  generateExportImage();
+}
+
+function updateExportWeekLabel(){
+  const label = document.getElementById('export-week-label');
+  if(!label) return;
+  const src = exportMode==='eval' ? evalTrades : trades;
+  const yr=exportCalYear, mo=exportCalMonth;
+  const daysInMonth=new Date(yr,mo+1,0).getDate();
+  const monthPrefix=yr+'-'+String(mo+1).padStart(2,'0')+'-';
+  let lastTradeDate=null;
+  for(let d=daysInMonth;d>=1;d--){
+    const ds=monthPrefix+String(d).padStart(2,'0');
+    if(src.some(t=>t.date===ds)){lastTradeDate=ds;break;}
+  }
+  const pivotDate=lastTradeDate?new Date(lastTradeDate):new Date();
+  const dow=pivotDate.getDay();
+  const monday=new Date(pivotDate);
+  monday.setDate(pivotDate.getDate()-(dow===0?6:dow-1)+(exportWeekOffset*7));
+  const fri=new Date(monday); fri.setDate(monday.getDate()+4);
+  const fmt=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  label.textContent=fmt(monday)+' – '+fmt(fri);
 }
 
 function generateExportImage(){
@@ -5531,9 +5571,21 @@ function drawTradeReport(){
 function drawWeeklyReport(){
   const src = exportMode==='eval'?evalTrades:trades;
   const C = getThemeColors();
-  const now=new Date(), dow=now.getDay();
-  const monday=new Date(now);
-  monday.setDate(now.getDate()-(dow===0?6:dow-1));
+  // Find the last week in the viewed calendar month that has trades
+  const yr=exportCalYear, mo=exportCalMonth;
+  const daysInMonth=new Date(yr,mo+1,0).getDate();
+  const monthPrefix=yr+'-'+String(mo+1).padStart(2,'0')+'-';
+  // Find last date with trades in this month
+  let lastTradeDate=null;
+  for(let d=daysInMonth;d>=1;d--){
+    const ds=monthPrefix+String(d).padStart(2,'0');
+    if(src.some(t=>t.date===ds)){lastTradeDate=ds;break;}
+  }
+  // If no trades this month, fall back to current week
+  const pivotDate=lastTradeDate?new Date(lastTradeDate):new Date();
+  const dow=pivotDate.getDay();
+  const monday=new Date(pivotDate);
+  monday.setDate(pivotDate.getDate()-(dow===0?6:dow-1)+(exportWeekOffset*7));
   const DAYS=['MON','TUE','WED','THU','FRI'];
   const dayDates=DAYS.map((_,i)=>{const d=new Date(monday);d.setDate(monday.getDate()+i);return d.toISOString().slice(0,10);});
   const byDay=dayDates.map(ds=>src.filter(t=>t.date===ds));
@@ -5638,8 +5690,8 @@ function drawMonthlyReport(){
   const src=exportMode==='eval'?evalTrades:trades;
   const C=getThemeColors();
   const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const yr=exportMode==='eval'?evalCalYear:calYear;
-  const mo=exportMode==='eval'?evalCalMonth:calMonth;
+  const yr=exportCalYear;
+  const mo=exportCalMonth;
   const monthTrades=src.filter(t=>t.date&&t.date.startsWith(yr+'-'+String(mo+1).padStart(2,'0')));
   const monthPnl=monthTrades.reduce((s,t)=>s+(parseFloat(t.pnl)||0)*(parseInt(t.copies)||1),0);
   const monthWins=monthTrades.filter(t=>t.result==='W').length;
@@ -5769,6 +5821,11 @@ async function shareExportImage(){
   <div class="export-modal">
     <div class="export-modal-title">📤 Export Report</div>
     <div class="export-modal-sub">Choose report type to generate a shareable image</div>
+    <div id="export-week-nav" style="display:none;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:6px 10px;margin-bottom:10px;">
+      <button onclick="shiftExportWeek(-1)" style="background:none;border:none;color:var(--text2);font-size:18px;cursor:pointer;padding:0 6px;">‹</button>
+      <span id="export-week-label" style="font-size:11px;font-family:var(--mono);color:var(--text2);">This Week</span>
+      <button onclick="shiftExportWeek(1)" style="background:none;border:none;color:var(--text2);font-size:18px;cursor:pointer;padding:0 6px;">›</button>
+    </div>
     <div class="export-type-grid">
       <div class="export-type-btn active" id="exp-btn-trade" onclick="setExportType('trade')">
         <span class="export-type-icon">📊</span>
