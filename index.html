@@ -2331,7 +2331,7 @@ async function loadData(){
 }
 async function saveData(msg='Update'){
   setSyncState('syncing','saving…');
-  try{await writeFile(DATA_PATH,{trades,evalTrades,finances,accounts:extraAccounts,notes,tradeBreakdowns,accountProfiles},msg);setSyncState('synced','synced');}
+  try{await writeFile(DATA_PATH,{trades,evalTrades,finances,accounts:extraAccounts,customChecklist,notes,tradeBreakdowns,accountProfiles},msg);setSyncState('synced','synced');}
   catch(e){setSyncState('error','save failed');showToast('❌ Save failed: '+e.message,'error');}
 }
 
