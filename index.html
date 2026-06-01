@@ -291,16 +291,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 2
 .no-trades{text-align:center;padding:44px 20px;color:var(--text3);font-size:12px;}
 
 /* Checklist */
-.checklist-box{background:var(--bg);border:1px solid var(--border2);border-radius:7px;padding:10px 12px;margin-bottom:13px;}
-.checklist-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;}
-.checklist-item:last-child{border-bottom:none;}
-.checklist-item input[type=checkbox]{width:14px;height:14px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;}
-.checklist-item label{font-size:12px;color:var(--text2);cursor:pointer;flex:1;transition:color .15s;}
-.checklist-item input:checked+label{color:var(--text);text-decoration:line-through;opacity:.6;}
-.checklist-score{font-family:var(--mono);font-size:11px;padding:3px 8px;border-radius:4px;margin-left:auto;}
-.checklist-score.full{background:rgba(34,197,94,.12);color:var(--result-win);}
-.checklist-score.partial{background:rgba(249,115,22,.12);color:var(--result-be);}
-.checklist-score.empty{background:rgba(239,68,68,.12);color:var(--result-loss);}
+
 
 /* Session picker */
 .session-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
@@ -909,7 +900,6 @@ select option{background:#111318;}
   .session-btn{font-size:9px !important;padding:7px 4px !important;}
 
   /* ── Checklist ── */
-  .checklist-item{padding:7px 8px;}
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1458,6 +1448,30 @@ body.glass-mode .export-modal{
   background:rgba(17,19,24,.85);backdrop-filter:blur(24px);
   border-color:rgba(255,255,255,.1);
 }
+
+/* ── Custom Checklist in Settings ── */
+.checklist-item-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);}
+.checklist-item-row:last-child{border-bottom:none;}
+.checklist-item-row .drag-handle{color:var(--text3);cursor:grab;font-size:14px;flex-shrink:0;user-select:none;}
+.checklist-item-row .item-text{flex:1;font-size:12px;color:var(--text2);}
+.checklist-item-row .item-del{background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:2px 6px;border-radius:4px;transition:all .15s;}
+.checklist-item-row .item-del:hover{color:var(--loss);background:rgba(239,68,68,.1);}
+.checklist-empty{font-size:11px;color:var(--text3);padding:10px 0;text-align:center;}
+.checklist-add-row{display:flex;gap:8px;margin-top:10px;}
+.checklist-add-row input{flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-family:var(--sans);font-size:12px;outline:none;}
+.checklist-add-row input:focus{border-color:var(--accent);}
+.checklist-add-row button{background:var(--accent);color:#000;border:none;border-radius:6px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;}
+/* Checklist in trade form */
+.checklist-box{background:var(--bg);border:1px solid var(--border2);border-radius:7px;padding:10px 12px;margin-bottom:4px;}
+.checklist-form-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;}
+.checklist-form-item:last-child{border-bottom:none;}
+.checklist-form-item input[type=checkbox]{width:14px;height:14px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;}
+.checklist-form-item label{font-size:12px;color:var(--text2);cursor:pointer;flex:1;}
+.checklist-form-item input:checked+label{color:var(--text);text-decoration:line-through;opacity:.6;}
+.checklist-score{font-family:var(--mono);font-size:11px;padding:3px 8px;border-radius:4px;margin-left:auto;}
+.checklist-score.full{background:rgba(34,197,94,.12);color:var(--result-win);}
+.checklist-score.partial{background:rgba(249,115,22,.12);color:var(--result-be);}
+.checklist-score.empty{background:rgba(239,68,68,.12);color:var(--result-loss);}
 </style>
 </head>
 <body>
@@ -2083,23 +2097,21 @@ body.glass-mode .export-modal{
       <input type="text" id="settings-accounts" placeholder="My Other Fund, Custom Account">
     </div>
 
-    <div style="height:1px;background:var(--border);margin:16px 0;"></div>
-    <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:10px;letter-spacing:.5px;">✅ Pre-Trade Checklist</div>
-    <div style="font-size:11px;color:var(--text3);margin-bottom:10px;">Default items are always included. Add your own custom items below.</div>
 
-    <div style="background:var(--bg);border:1px solid var(--border2);border-radius:7px;padding:10px 12px;margin-bottom:10px;">
-      <div style="font-size:10px;color:var(--text3);margin-bottom:8px;letter-spacing:.5px;">DEFAULT ITEMS (always active)</div>
-      <div id="default-checklist-items"></div>
+
+    <div style="height:1px;background:var(--border);margin:18px 0;"></div>
+    <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;letter-spacing:.5px;">✅ Pre-Trade Checklist</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:10px;">These items appear in the trade entry form before logging a trade.</div>
+    <div style="background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;margin-bottom:4px;min-height:44px;" id="checklist-items-list">
+      <div class="checklist-empty">No checklist items yet.</div>
+    </div>
+    <div class="checklist-add-row">
+      <input type="text" id="new-checklist-input" placeholder="e.g. Checked economic calendar…" maxlength="80"
+        onkeydown="if(event.key==='Enter')addChecklistItem()">
+      <button onclick="addChecklistItem()">＋ Add</button>
     </div>
 
-    <div style="font-size:10px;color:var(--text3);margin-bottom:6px;letter-spacing:.5px;">CUSTOM ITEMS</div>
-    <div id="custom-checklist-items" style="margin-bottom:8px;"></div>
-    <div style="display:flex;gap:8px;">
-      <input type="text" id="new-checklist-item" placeholder="Add custom checklist item…" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-family:var(--sans);font-size:12px;outline:none;" onkeydown="if(event.key==='Enter')addChecklistItem()">
-      <button class="btn-add" onclick="addChecklistItem()" style="flex-shrink:0;">＋ Add</button>
-    </div>
-
-    <div style="display:flex;gap:9px;margin-top:16px;">
+    <div style="display:flex;gap:9px;margin-top:18px;">
       <button class="btn-save" style="margin:0;" onclick="saveSettings()">Save</button>
       <button class="btn-edit" style="margin:0;flex:0 0 auto;width:auto;padding:8px 16px;" onclick="closeSettings()">Cancel</button>
     </div>
@@ -2198,15 +2210,6 @@ const PRESET_ACCOUNTS=['LUCID TRADING','APEX TRADER','MY FUNDED FUTURES','TRADEI
 const PRESET_ASSETS=['NQ','ES','YM','RTY','GOLD','SILVER','EURUSD','GBPUSD','USDJPY','AUDUSD','USDCAD','BTC','ETH','SOL'];
 const FUTURES_ASSETS=['NQ','ES','YM','RTY'];
 const DATA_PATH='data/trades.json';
-
-const DEFAULT_CHECKLIST=[
-  'Followed my trading plan',
-  'Checked economic news / calendar',
-  'Proper risk size (max 1-2%)',
-  'Clear entry with confirmation',
-  'Stop loss placed before entry',
-  'Not revenge trading',
-];
 
 const SESSIONS=['London','New York','Asia','London-NY Overlap'];
 const FUTURES_TIMINGS=['Regular Hours','Pre-Market','Post-Market'];
@@ -2311,8 +2314,8 @@ async function loadData(){
     evalTrades=data.evalTrades||[];
     finances=data.finances||[];
     extraAccounts=data.accounts||[];
+        notes=data.notes||[];
     customChecklist=data.customChecklist||[];
-    notes=data.notes||[];
     tradeBreakdowns=data.tradeBreakdowns||[];
     accountProfiles=data.accountProfiles||[];
     if(data.expenses&&!finances.length){
@@ -2328,7 +2331,7 @@ async function loadData(){
 }
 async function saveData(msg='Update'){
   setSyncState('syncing','saving…');
-  try{await writeFile(DATA_PATH,{trades,evalTrades,finances,accounts:extraAccounts,customChecklist,notes,tradeBreakdowns,accountProfiles},msg);setSyncState('synced','synced');}
+  try{await writeFile(DATA_PATH,{trades,evalTrades,finances,accounts:extraAccounts,notes,tradeBreakdowns,accountProfiles},msg);setSyncState('synced','synced');}
   catch(e){setSyncState('error','save failed');showToast('❌ Save failed: '+e.message,'error');}
 }
 
@@ -3274,21 +3277,23 @@ function showForm(trade,mode){
       </div>
     </div>
 
+
+    ${customChecklist.length?`
     <div class="form-group">
       <label style="display:flex;align-items:center;justify-content:space-between;">
         <span>Pre-Trade Checklist</span>
         <span id="${isEval?'ef':'f'}-checklist-score" class="checklist-score"></span>
       </label>
       <div class="checklist-box" id="${isEval?'ef':'f'}-checklist">
-        ${[...DEFAULT_CHECKLIST,...customChecklist].map((item,i)=>{
+        ${customChecklist.map((item,i)=>{
           const checked=(t.checklist||[]).includes(item);
-          return`<div class="checklist-item" onclick="toggleCheck(this,'${mode}')">
-            <input type="checkbox" id="${isEval?'ef':'f'}-chk-${i}" ${checked?'checked':''} onclick="event.stopPropagation();updateChecklistScore('${mode}')">
-            <label for="${isEval?'ef':'f'}-chk-${i}">${esc(item)}</label>
-          </div>`;
+          return \`<div class="checklist-form-item" onclick="toggleCheck(this,'${mode}')">
+            <input type="checkbox" id="${isEval?'ef':'f'}-chk-\${i}" \${checked?'checked':''} onclick="event.stopPropagation();updateChecklistScore('${mode}')">
+            <label for="${isEval?'ef':'f'}-chk-\${i}">\${esc(item)}</label>
+          </div>\`;
         }).join('')}
       </div>
-    </div>
+    </div>`:''}
     <div class="form-row">
       <div class="form-group">
         <label>PnL / Account ($)</label>
@@ -3682,22 +3687,23 @@ function showDetail(id,mode){
       ${t.session?`<span style="background:rgba(0,148,255,.1);color:var(--accent2);padding:3px 9px;border-radius:4px;font-size:11px;font-family:var(--mono);">🕐 ${esc(t.session)}</span>`:''}
       ${t.marketTiming?`<span style="background:rgba(246,201,14,.1);color:#f6c90e;padding:3px 9px;border-radius:4px;font-size:11px;font-family:var(--mono);">⏱ ${esc(t.marketTiming)}</span>`:''}
     </div>`:''}
-    ${t.checklist&&t.checklist.length?`<div style="margin-bottom:12px;">
+
+    ${t.notes?`<div style="margin-bottom:12px;"><div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">Notes</div><div class="notes-box"><p>${esc(t.notes).replace(/\n/g,'<br>')}</p></div></div>`:''}
+    ${(t.checklist&&t.checklist.length&&customChecklist.length)?`<div style="margin-bottom:12px;">
       <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:7px;display:flex;align-items:center;justify-content:space-between;">
         <span>Pre-Trade Checklist</span>
-        <span style="font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(34,197,94,.1);color:var(--result-win);">${t.checklist.length}/${[...DEFAULT_CHECKLIST,...customChecklist].length} ✓</span>
+        <span style="font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(34,197,94,.1);color:var(--result-win);">${t.checklist.filter(i=>customChecklist.includes(i)).length}/${customChecklist.length} ✓</span>
       </div>
       <div style="background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;">
-        ${[...DEFAULT_CHECKLIST,...customChecklist].map(item=>{
+        ${customChecklist.map(item=>{
           const done=t.checklist.includes(item);
-          return`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);">
-            <span style="font-size:12px;">${done?'✅':'⬜'}</span>
-            <span style="font-size:11px;color:${done?'var(--text2)':'var(--text3)'};${done?'text-decoration:line-through;opacity:.6;':''}">${esc(item)}</span>
-          </div>`;
+          return \`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);">
+            <span style="font-size:12px;">\${done?'✅':'⬜'}</span>
+            <span style="font-size:11px;color:\${done?'var(--text2)':'var(--text3)'};\${done?'text-decoration:line-through;opacity:.6;':''}">\${esc(item)}</span>
+          </div>\`;
         }).join('')}
       </div>
     </div>`:''}
-    ${t.notes?`<div style="margin-bottom:12px;"><div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">Notes</div><div class="notes-box"><p>${esc(t.notes).replace(/\n/g,'<br>')}</p></div></div>`:''}
     <button class="btn-edit" style="border-color:${accentColor};color:${accentColor};" onclick="editTrade('${t.id}','${mode}')">✏ Edit Trade</button>
   `;
   openBottomSheet(panel);
@@ -3727,31 +3733,7 @@ function setTiming(btn,mode){
   if(!wasActive) btn.classList.add('active');
 }
 
-function toggleCheck(item,mode){
-  const cb=item.querySelector('input[type=checkbox]');
-  if(cb){ cb.checked=!cb.checked; updateChecklistScore(mode); }
-}
 
-function updateChecklistScore(mode){
-  const p=mode==='eval'?'ef':'f';
-  const box=document.getElementById(`${p}-checklist`);
-  const scoreEl=document.getElementById(`${p}-checklist-score`);
-  if(!box||!scoreEl) return;
-  const all=box.querySelectorAll('input[type=checkbox]');
-  const checked=box.querySelectorAll('input[type=checkbox]:checked');
-  const total=all.length, done=checked.length;
-  scoreEl.textContent=`${done}/${total}`;
-  scoreEl.className='checklist-score '+(done===total&&total>0?'full':done>0?'partial':'empty');
-}
-
-function getCheckedItems(mode){
-  const p=mode==='eval'?'ef':'f';
-  const box=document.getElementById(`${p}-checklist`);
-  if(!box) return [];
-  return [...box.querySelectorAll('input[type=checkbox]:checked')].map(cb=>{
-    return cb.nextElementSibling?.textContent||'';
-  }).filter(Boolean);
-}
 
 function getActiveSession(mode){
   const p=mode==='eval'?'ef':'f';
@@ -3775,50 +3757,80 @@ function setFilter(val,btn,mode){
 }
 
 // ── SETTINGS ──────────────────────────────────────────────
+function toggleCheck(item, mode){
+  const p = mode==='eval'?'ef':'f';
+  const cb = item.querySelector('input[type=checkbox]');
+  if(cb) cb.checked = !cb.checked;
+  updateChecklistScore(mode);
+}
+
+function updateChecklistScore(mode){
+  const p = mode==='eval'?'ef':'f';
+  const box = document.getElementById(p+'-checklist');
+  const scoreEl = document.getElementById(p+'-checklist-score');
+  if(!box||!scoreEl) return;
+  const total = box.querySelectorAll('input[type=checkbox]').length;
+  const done = box.querySelectorAll('input[type=checkbox]:checked').length;
+  scoreEl.textContent = done+'/'+total;
+  scoreEl.className = 'checklist-score '+(done===total&&total>0?'full':done>0?'partial':'empty');
+}
+
+function getCheckedItems(mode){
+  const p = mode==='eval'?'ef':'f';
+  const box = document.getElementById(p+'-checklist');
+  if(!box) return [];
+  const checked = [];
+  box.querySelectorAll('input[type=checkbox]:checked').forEach((cb,i)=>{
+    if(customChecklist[i]) checked.push(customChecklist[i]);
+  });
+  return checked;
+}
+
 function openSettings(){
   document.getElementById('settings-accounts').value=extraAccounts.join(', ');
-  // Render default checklist items
-  const defEl=document.getElementById('default-checklist-items');
-  if(defEl) defEl.innerHTML=DEFAULT_CHECKLIST.map(item=>
-    `<div style="font-size:11px;color:var(--text2);padding:3px 0;display:flex;align-items:center;gap:6px;">
-      <span style="color:var(--result-win);">✓</span>${esc(item)}
-    </div>`).join('');
-  renderCustomChecklist();
+  renderChecklistSettings();
   document.getElementById('settings-modal').classList.add('open');
 }
 function closeSettings(){document.getElementById('settings-modal').classList.remove('open');}
 
-function renderCustomChecklist(){
-  const el=document.getElementById('custom-checklist-items');
-  if(!el) return;
-  if(!customChecklist.length){el.innerHTML='<div style="font-size:11px;color:var(--text3);padding:4px 0;">No custom items yet.</div>';return;}
-  el.innerHTML=customChecklist.map((item,i)=>`
-    <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);">
-      <span style="flex:1;font-size:11px;color:var(--text2);">${esc(item)}</span>
-      <button onclick="removeChecklistItem(${i})" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:0 4px;" title="Remove">✕</button>
-    </div>`).join('');
-}
 
-function addChecklistItem(){
-  const input=document.getElementById('new-checklist-item');
-  const val=input.value.trim();
-  if(!val){showToast('Enter a checklist item','error');return;}
-  if(DEFAULT_CHECKLIST.includes(val)||customChecklist.includes(val)){showToast('Item already exists','error');return;}
-  customChecklist.push(val);
-  input.value='';
-  renderCustomChecklist();
-}
 
-function removeChecklistItem(idx){
-  customChecklist.splice(idx,1);
-  renderCustomChecklist();
-}
 
 async function saveSettings(){
   const raw=document.getElementById('settings-accounts').value;
   extraAccounts=raw.split(',').map(s=>s.trim()).filter(Boolean);
   renderAccountFilters();renderEvalAccountFilters();closeSettings();
   await saveData('Update settings');showToast('✅ Settings saved');
+}
+
+function renderChecklistSettings(){
+  const list=document.getElementById('checklist-items-list');
+  if(!list) return;
+  if(!customChecklist.length){
+    list.innerHTML='<div class="checklist-empty">No checklist items yet.</div>';
+    return;
+  }
+  list.innerHTML=customChecklist.map((item,i)=>`
+    <div class="checklist-item-row">
+      <span class="drag-handle">⠿</span>
+      <span class="item-text">${esc(item)}</span>
+      <button class="item-del" onclick="removeChecklistItem(${i})" title="Remove">✕</button>
+    </div>`).join('');
+}
+
+function addChecklistItem(){
+  const input=document.getElementById('new-checklist-input');
+  const val=(input.value||'').trim();
+  if(!val){showToast('Enter an item first','error');return;}
+  if(customChecklist.includes(val)){showToast('Item already exists','error');return;}
+  customChecklist.push(val);
+  input.value='';
+  renderChecklistSettings();
+}
+
+function removeChecklistItem(idx){
+  customChecklist.splice(idx,1);
+  renderChecklistSettings();
 }
 
 function logout(){
