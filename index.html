@@ -4930,22 +4930,36 @@ function getAcctStats(acct){
     dayMap[d]+=tradePnlForAcct(t);
   });
 
-  const sortedDays=Object.keys(dayMap).sort();
+  // ── Group payouts by date so they reduce balance at the right point ──
+  // Payouts reduce the account balance (and thus the trailing DD floor)
+  // from the date they were taken, not just at display time.
+  const payoutDayMap={};
+  linkedPayouts.forEach(p=>{
+    const d=p.date||'';
+    if(!payoutDayMap[d]) payoutDayMap[d]=0;
+    payoutDayMap[d]+=(parseFloat(p.amount)||0);
+  });
+
+  // Merge all dates (trade days + payout days)
+  const allDays=[...new Set([...Object.keys(dayMap),...Object.keys(payoutDayMap)])].sort();
+
   let runningBal=startBal;
   let eodPeak=startBal;
   let trailingLocked=false;
-  let currentFloor=startBal-maxDDAmt; // current trailing floor
+  let currentFloor=startBal-maxDDAmt;
   let todayDDfromPeak=0;
 
-  const todayStr=today(); // actual calendar date (YYYY-MM-DD)
+  const todayStr=today();
 
-  sortedDays.forEach((day,idx)=>{
-    const dayPnl=dayMap[day];
-    const balAfterDay=runningBal+dayPnl;
+  allDays.forEach(day=>{
+    const dayPnl=dayMap[day]||0;
+    const dayPayout=payoutDayMap[day]||0;
 
-    runningBal=balAfterDay;
+    // Apply trades first, then payout
+    runningBal+=dayPnl;
 
-    // Update EOD peak and trailing floor (only while not locked)
+    // Update EOD peak and trailing floor BEFORE deducting payout
+    // (peak is set by trading performance, not payouts)
     if(!trailingLocked && runningBal>eodPeak){
       eodPeak=runningBal;
       currentFloor=eodPeak-maxDDAmt;
@@ -4955,26 +4969,22 @@ function getAcctStats(acct){
         currentFloor=lockedFloor;
       }
     }
+
+    // Deduct payout from running balance — this reduces available drawdown
+    // because your account balance drops when you withdraw
+    runningBal-=dayPayout;
   });
 
   // ── Today's daily DD — resets every day ──
-  // Daily DD measures only TODAY's loss from today's opening balance.
-  // If no trades today → daily DD is 0 (fresh slate).
-  const todayPnl = dayMap[todayStr] || 0;
-  // Daily DD is simply: how much have you lost today?
-  // Only negative today PNL counts — profits don't accumulate daily DD.
-  todayDDfromPeak = Math.max(0, -todayPnl);
+  const todayPnl=dayMap[todayStr]||0;
+  todayDDfromPeak=Math.max(0,-todayPnl);
 
-  // Current drawdown used = how far current balance is below the peak
-  // This is what matters: if you're profitable, this shrinks
-  const currentDrawdownUsed = trailingLocked
-    ? Math.max(0, (lockedFloor+maxDDAmt) - runningBal)
-    : Math.max(0, eodPeak - runningBal);
+  // ── Current drawdown used — payouts already deducted from runningBal ──
+  const currentDrawdownUsed=trailingLocked
+    ? Math.max(0,(lockedFloor+maxDDAmt)-runningBal)
+    : Math.max(0,eodPeak-runningBal);
 
-  const currentFloorFinal = trailingLocked ? lockedFloor : currentFloor;
-
-  // Deduct payouts from balance (money withdrawn from account)
-  runningBal -= totalPayouts;
+  const currentFloorFinal=trailingLocked?lockedFloor:currentFloor;
 
   const currentPnl=runningBal-startBal;
   const currentBalance=runningBal;
