@@ -4957,13 +4957,13 @@ function getAcctStats(acct){
     }
   });
 
-  // ── Today's daily DD — only trades from TODAY count ──
-  // If no trades today, daily DD is 0 (fresh day, full limit available)
+  // ── Today's daily DD — resets every day ──
+  // Daily DD measures only TODAY's loss from today's opening balance.
+  // If no trades today → daily DD is 0 (fresh slate).
   const todayPnl = dayMap[todayStr] || 0;
-  const balBeforeToday = runningBal - todayPnl;
-  const peakForToday = trailingLocked ? (lockedFloor+maxDDAmt) : Math.max(eodPeak, balBeforeToday);
-  const balAfterToday = balBeforeToday + todayPnl;
-  todayDDfromPeak = Math.max(0, peakForToday - balAfterToday);
+  // Daily DD is simply: how much have you lost today?
+  // Only negative today PNL counts — profits don't accumulate daily DD.
+  todayDDfromPeak = Math.max(0, -todayPnl);
 
   // Current drawdown used = how far current balance is below the peak
   // This is what matters: if you're profitable, this shrinks
