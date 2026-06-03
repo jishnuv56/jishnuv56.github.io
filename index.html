@@ -4937,19 +4937,11 @@ function getAcctStats(acct){
   let currentFloor=startBal-maxDDAmt; // current trailing floor
   let todayDDfromPeak=0;
 
+  const todayStr=today(); // actual calendar date (YYYY-MM-DD)
+
   sortedDays.forEach((day,idx)=>{
     const dayPnl=dayMap[day];
     const balAfterDay=runningBal+dayPnl;
-
-    // Today's drawdown = distance from current floor's ceiling (the peak that set this floor)
-    // while trailing is active, that's how far below the eodPeak we closed
-    if(idx===sortedDays.length-1){
-      if(trailingLocked){
-        todayDDfromPeak=Math.max(0, (lockedFloor+maxDDAmt) - balAfterDay);
-      } else {
-        todayDDfromPeak=Math.max(0, eodPeak - balAfterDay);
-      }
-    }
 
     runningBal=balAfterDay;
 
@@ -4964,6 +4956,14 @@ function getAcctStats(acct){
       }
     }
   });
+
+  // ── Today's daily DD — only trades from TODAY count ──
+  // If no trades today, daily DD is 0 (fresh day, full limit available)
+  const todayPnl = dayMap[todayStr] || 0;
+  const balBeforeToday = runningBal - todayPnl;
+  const peakForToday = trailingLocked ? (lockedFloor+maxDDAmt) : Math.max(eodPeak, balBeforeToday);
+  const balAfterToday = balBeforeToday + todayPnl;
+  todayDDfromPeak = Math.max(0, peakForToday - balAfterToday);
 
   // Current drawdown used = how far current balance is below the peak
   // This is what matters: if you're profitable, this shrinks
