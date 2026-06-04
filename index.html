@@ -4955,11 +4955,10 @@ function getAcctStats(acct){
     const dayPnl=dayMap[day]||0;
     const dayPayout=payoutDayMap[day]||0;
 
-    // Apply trades first, then payout
+    // 1. Apply today's trading PnL
     runningBal+=dayPnl;
 
-    // Update EOD peak and trailing floor BEFORE deducting payout
-    // (peak is set by trading performance, not payouts)
+    // 2. Update EOD peak based on trading performance (not affected by payouts)
     if(!trailingLocked && runningBal>eodPeak){
       eodPeak=runningBal;
       currentFloor=eodPeak-maxDDAmt;
@@ -4970,9 +4969,22 @@ function getAcctStats(acct){
       }
     }
 
-    // Deduct payout from running balance — this reduces available drawdown
-    // because your account balance drops when you withdraw
-    runningBal-=dayPayout;
+    // 3. Process payout — Lucid logic:
+    //    When a payout is requested, Lucid recalculates the FULL account
+    //    history including the gross peak. If the gross historical peak
+    //    (before this payout) already crossed the lock threshold, the floor
+    //    locks at startBal + 100 at this point — even if it hadn't locked yet
+    //    during normal trading (because the trailing peak didn't cross while
+    //    the balance was at that level end-of-day).
+    if(dayPayout>0){
+      // Check if gross peak (trading only, pre-payout) crosses lock threshold
+      if(!trailingLocked && eodPeak>=trailingLockThreshold){
+        trailingLocked=true;
+        currentFloor=lockedFloor;
+      }
+      // Deduct payout from balance
+      runningBal-=dayPayout;
+    }
   });
 
   // ── Today's daily DD — resets every day ──
