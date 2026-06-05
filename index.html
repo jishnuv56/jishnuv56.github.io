@@ -5023,9 +5023,25 @@ function getAcctStats(acct){
   const currentPnl=runningBal-startBal;
   const currentBalance=runningBal;
 
-  const maxDDUsedPct=maxDDAmt>0?Math.min(100,(finalDrawdownUsed/maxDDAmt)*100):0;
+  // When locked (manual or auto), the effective max DD is:
+  // currentBalance - floor  (how much room you have before hitting the floor)
+  const effectiveMaxDD = finalTrailingLocked
+    ? Math.max(0, runningBal - currentFloorFinal)
+    : maxDDAmt;
+  const effectiveMaxDDTotal = finalTrailingLocked
+    ? Math.max(0, runningBal - currentFloorFinal) + finalDrawdownUsed
+    : maxDDAmt; // total range = balance - floor when locked
+  const lockedTotalRange = finalTrailingLocked
+    ? Math.max(0, runningBal - currentFloorFinal) + finalDrawdownUsed
+    : maxDDAmt;
+
+  const maxDDUsedPct = finalTrailingLocked
+    ? (lockedTotalRange > 0 ? Math.min(100, (finalDrawdownUsed / lockedTotalRange) * 100) : 0)
+    : (maxDDAmt > 0 ? Math.min(100, (finalDrawdownUsed / maxDDAmt) * 100) : 0);
   const todayDDPct=dailyDDAmt>0?Math.min(100,(todayDDfromPeak/dailyDDAmt)*100):0;
-  const maxDDRemaining=Math.max(0,maxDDAmt-finalDrawdownUsed);
+  const maxDDRemaining = finalTrailingLocked
+    ? Math.max(0, runningBal - currentFloorFinal)
+    : Math.max(0, maxDDAmt - finalDrawdownUsed);
   const dailyDDRemaining=Math.max(0,dailyDDAmt-todayDDfromPeak);
 
   const profitTargetAmt=startBal*(acct.profitTarget/100);
@@ -5038,7 +5054,7 @@ function getAcctStats(acct){
   return{
     linked,currentPnl,currentBalance,
     profitTargetAmt,profitProgress,
-    maxDDAmt,dailyDDAmt,
+    maxDDAmt,dailyDDAmt,effectiveMaxDD,lockedTotalRange,
     drawdownUsed:finalDrawdownUsed,
     currentFloor:currentFloorFinal,
     trailingLocked:finalTrailingLocked,
@@ -5157,8 +5173,9 @@ function renderAccounts(){
       </div>
 
       <!-- Trailing lock banner -->
-      ${s.trailingLocked?`<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:7px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:var(--win);display:flex;align-items:center;gap:7px;">
-        🔒 <span><strong>Trailing stopped.</strong> Drawdown floor locked at <span style="font-family:var(--mono);">${fmtMoney(s.lockedFloor)}</span> — you are protected above your starting balance.</span>
+      ${s.trailingLocked?`<div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);border-radius:7px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:var(--win);display:flex;align-items:center;justify-content:space-between;gap:7px;">
+        <span>🔒 <strong>Floor locked</strong> at <span style="font-family:var(--mono);">${fmtMoney(s.currentFloor)}</span></span>
+        <span style="font-family:var(--mono);font-size:12px;color:${s.maxDDRemaining<500?'var(--loss)':'var(--win)'};">${fmtMoney(s.maxDDRemaining)} remaining</span>
       </div>`:''}
 
       <!-- Profit target progress -->
@@ -5178,15 +5195,17 @@ function renderAccounts(){
       <div class="acct-bar-wrap">
         <div class="acct-bar-label">
           <span style="color:${s.trailingLocked?'var(--win)':ddColor}">
-            📉 Trailing Max DD (${a.maxDD}%)
-            <span style="font-size:9px;opacity:.7;">${s.trailingLocked?'🔒 locked at '+fmtMoney(s.lockedFloor):'floor: '+fmtMoney(s.currentFloor)}</span>
+            📉 Max DD ${s.trailingLocked?'(Floor Locked)':'('+a.maxDD+'%)'}
+            <span style="font-size:9px;opacity:.7;">${s.trailingLocked?'🔒 floor: '+fmtMoney(s.currentFloor):'floor: '+fmtMoney(s.currentFloor)}</span>
           </span>
-          <span style="color:${s.trailingLocked?'var(--win)':ddColor}">
-            ${s.trailingLocked?`Floor fixed · used ${fmtMoney(s.drawdownUsed)} / ${fmtMoney(s.maxDDAmt)}`:`${s.maxDDUsedPct.toFixed(1)}% used · ${fmtMoney(s.drawdownUsed)} / ${fmtMoney(s.maxDDAmt)}`}
+          <span style="color:${s.maxDDUsedPct>80?'var(--loss)':s.trailingLocked?'var(--win)':ddColor}">
+            ${s.trailingLocked
+              ? `${fmtMoney(s.drawdownUsed)} used · ${fmtMoney(s.maxDDRemaining)} left`
+              : `${s.maxDDUsedPct.toFixed(1)}% · ${fmtMoney(s.drawdownUsed)} / ${fmtMoney(s.maxDDAmt)}`}
           </span>
         </div>
         <div class="acct-bar-track">
-          <div class="acct-bar-fill ${s.trailingLocked?'profit':ddBarClass}" style="width:${s.trailingLocked?100:s.maxDDUsedPct}%;${s.trailingLocked?'background:rgba(34,197,94,.4);':''}"></div>
+          <div class="acct-bar-fill ${ddBarClass}" style="width:${s.maxDDUsedPct}%;"></div>
         </div>
       </div>
 
