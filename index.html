@@ -2191,6 +2191,15 @@ body.glass-mode .export-modal{
     </div>
 
     <div style="margin-bottom:13px;">
+      <label style="display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:5px;">
+        Manual Floor Override <span style="color:var(--text3);font-size:9px;text-transform:none;letter-spacing:0;">(optional — overrides auto calculation)</span>
+      </label>
+      <input type="number" id="acct-manual-floor" placeholder="e.g. 50100 — leave blank to auto-calculate" step="0.01"
+        style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:9px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;">
+      <div style="font-size:10px;color:var(--text3);margin-top:4px;">Set this if your prop firm shows a different floor. When set, drawdown is measured from this value.</div>
+    </div>
+
+    <div style="margin-bottom:13px;">
       <label style="display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:5px;">Notes (optional)</label>
       <input type="text" id="acct-notes" placeholder="e.g. PA account, challenge started Jan 2025…" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:9px 10px;color:var(--text);font-family:var(--sans);font-size:12px;outline:none;">
     </div>
@@ -4801,6 +4810,7 @@ function openAcctForm(id){
   document.getElementById('acct-daily-dd').value=a?.dailyDD||'';
   document.getElementById('acct-max-dd').value=a?.maxDD||'';
   document.getElementById('acct-phase').value=a?.phase||'Eval Phase 1';
+  document.getElementById('acct-manual-floor').value=a?.manualFloor||'';
   document.getElementById('acct-notes').value=a?.notes||'';
   // Set status buttons — reset all first, then activate if not 'Active'
   const status=a?.status||'Active';
@@ -4852,10 +4862,11 @@ async function saveAcct(){
   const dailyDD=parseFloat(document.getElementById('acct-daily-dd').value)||5;
   const maxDD=parseFloat(document.getElementById('acct-max-dd').value)||10;
   const phase=document.getElementById('acct-phase').value;
+  const manualFloor=parseFloat(document.getElementById('acct-manual-floor').value)||null;
   const notes=document.getElementById('acct-notes').value.trim();
   const statusBtn=document.querySelector('.acct-status-btn[data-active="1"]');
   const status=statusBtn?.dataset.status||'Active'; // no selection = Active
-  const entry={id:editingAcctId||uid(),name,firm,size,startingBalance,profitTarget,dailyDD,maxDD,phase,status,notes,createdAt:editingAcctId?(accountProfiles.find(a=>a.id===editingAcctId)?.createdAt||new Date().toISOString()):new Date().toISOString()};
+  const entry={id:editingAcctId||uid(),name,firm,size,startingBalance,profitTarget,dailyDD,maxDD,phase,status,notes,manualFloor,createdAt:editingAcctId?(accountProfiles.find(a=>a.id===editingAcctId)?.createdAt||new Date().toISOString()):new Date().toISOString()};
   if(editingAcctId){const idx=accountProfiles.findIndex(a=>a.id===editingAcctId);if(idx!==-1)accountProfiles[idx]=entry;}
   else accountProfiles.push(entry);
   closeAcctForm();
@@ -4996,14 +5007,25 @@ function getAcctStats(acct){
     ? Math.max(0,(lockedFloor+maxDDAmt)-runningBal)
     : Math.max(0,eodPeak-runningBal);
 
-  const currentFloorFinal=trailingLocked?lockedFloor:currentFloor;
+  // ── Manual Floor Override ──────────────────────────────
+  // If user set a manual floor (e.g. prop firm locked it differently),
+  // use that value instead. Drawdown is measured from this floor.
+  let currentFloorFinal=trailingLocked?lockedFloor:currentFloor;
+  let finalDrawdownUsed=currentDrawdownUsed;
+  let finalTrailingLocked=trailingLocked;
+  if(acct.manualFloor&&acct.manualFloor>0){
+    currentFloorFinal=acct.manualFloor;
+    finalTrailingLocked=true;
+    finalDrawdownUsed=Math.max(0,acct.manualFloor-runningBal);
+  }
+
 
   const currentPnl=runningBal-startBal;
   const currentBalance=runningBal;
 
-  const maxDDUsedPct=maxDDAmt>0?Math.min(100,(currentDrawdownUsed/maxDDAmt)*100):0;
+  const maxDDUsedPct=maxDDAmt>0?Math.min(100,(finalDrawdownUsed/maxDDAmt)*100):0;
   const todayDDPct=dailyDDAmt>0?Math.min(100,(todayDDfromPeak/dailyDDAmt)*100):0;
-  const maxDDRemaining=Math.max(0,maxDDAmt-currentDrawdownUsed);
+  const maxDDRemaining=Math.max(0,maxDDAmt-finalDrawdownUsed);
   const dailyDDRemaining=Math.max(0,dailyDDAmt-todayDDfromPeak);
 
   const profitTargetAmt=startBal*(acct.profitTarget/100);
@@ -5017,8 +5039,9 @@ function getAcctStats(acct){
     linked,currentPnl,currentBalance,
     profitTargetAmt,profitProgress,
     maxDDAmt,dailyDDAmt,
-    drawdownUsed:currentDrawdownUsed,
+    drawdownUsed:finalDrawdownUsed,
     currentFloor:currentFloorFinal,
+    trailingLocked:finalTrailingLocked,
     maxDDUsedPct,
     todayDDfromPeak,todayDDPct,
     maxDDRemaining,dailyDDRemaining,
