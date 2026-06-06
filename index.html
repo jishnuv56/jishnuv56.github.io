@@ -5008,41 +5008,50 @@ function getAcctStats(acct){
     : Math.max(0,eodPeak-runningBal);
 
   // ── Manual Floor Override ──────────────────────────────
-  // If user set a manual floor (e.g. prop firm locked it differently),
-  // use that value instead. Drawdown is measured from this floor.
-  let currentFloorFinal=trailingLocked?lockedFloor:currentFloor;
-  let finalDrawdownUsed=currentDrawdownUsed;
-  let finalTrailingLocked=trailingLocked;
-  if(acct.manualFloor&&acct.manualFloor>0){
-    currentFloorFinal=acct.manualFloor;
-    finalTrailingLocked=true;
-    finalDrawdownUsed=Math.max(0,acct.manualFloor-runningBal);
+  let currentFloorFinal = trailingLocked ? lockedFloor : currentFloor;
+  let finalTrailingLocked = trailingLocked;
+  if(acct.manualFloor && acct.manualFloor > 0){
+    currentFloorFinal = acct.manualFloor;
+    finalTrailingLocked = true;
   }
 
+  const currentPnl = runningBal - startBal;
+  const currentBalance = runningBal;
 
-  const currentPnl=runningBal-startBal;
-  const currentBalance=runningBal;
+  // ── Drawdown calculations ──────────────────────────────
+  // When floor is locked (manual or auto):
+  //   - maxDDTotal    = balance - floor  (total buffer you have)
+  //   - drawdownUsed  = how much of that buffer is gone (0 if above floor)
+  //   - maxDDRemaining= balance - floor  (what's left)
+  //   - maxDDUsedPct  = drawdownUsed / maxDDTotal * 100
+  //
+  // When trailing (not locked):
+  //   - uses the standard % based maxDDAmt
 
-  // When locked (manual or auto), the effective max DD is:
-  // currentBalance - floor  (how much room you have before hitting the floor)
-  const effectiveMaxDD = finalTrailingLocked
-    ? Math.max(0, runningBal - currentFloorFinal)
-    : maxDDAmt;
-  const effectiveMaxDDTotal = finalTrailingLocked
-    ? Math.max(0, runningBal - currentFloorFinal) + finalDrawdownUsed
-    : maxDDAmt; // total range = balance - floor when locked
-  const lockedTotalRange = finalTrailingLocked
-    ? Math.max(0, runningBal - currentFloorFinal) + finalDrawdownUsed
-    : maxDDAmt;
+  let finalDrawdownUsed, maxDDTotal, maxDDUsedPct, maxDDRemaining;
 
-  const maxDDUsedPct = finalTrailingLocked
-    ? (lockedTotalRange > 0 ? Math.min(100, (finalDrawdownUsed / lockedTotalRange) * 100) : 0)
-    : (maxDDAmt > 0 ? Math.min(100, (finalDrawdownUsed / maxDDAmt) * 100) : 0);
-  const todayDDPct=dailyDDAmt>0?Math.min(100,(todayDDfromPeak/dailyDDAmt)*100):0;
-  const maxDDRemaining = finalTrailingLocked
-    ? Math.max(0, runningBal - currentFloorFinal)
-    : Math.max(0, maxDDAmt - finalDrawdownUsed);
-  const dailyDDRemaining=Math.max(0,dailyDDAmt-todayDDfromPeak);
+  if(finalTrailingLocked){
+    // Total buffer = current balance minus the locked floor
+    maxDDTotal    = Math.max(0, runningBal - currentFloorFinal);
+    // If balance is already below floor, drawdownUsed = how far below
+    finalDrawdownUsed = runningBal >= currentFloorFinal
+      ? 0
+      : Math.abs(runningBal - currentFloorFinal);
+    maxDDRemaining  = maxDDTotal; // remaining room = balance - floor
+    maxDDUsedPct    = (maxDDTotal + finalDrawdownUsed) > 0
+      ? Math.min(100, (finalDrawdownUsed / (maxDDTotal + finalDrawdownUsed)) * 100)
+      : 0;
+  } else {
+    finalDrawdownUsed = currentDrawdownUsed;
+    maxDDTotal        = maxDDAmt;
+    maxDDRemaining    = Math.max(0, maxDDAmt - finalDrawdownUsed);
+    maxDDUsedPct      = maxDDAmt > 0
+      ? Math.min(100, (finalDrawdownUsed / maxDDAmt) * 100)
+      : 0;
+  }
+
+  const todayDDPct = dailyDDAmt > 0 ? Math.min(100,(todayDDfromPeak/dailyDDAmt)*100) : 0;
+  const dailyDDRemaining = Math.max(0, dailyDDAmt - todayDDfromPeak);
 
   const profitTargetAmt=startBal*(acct.profitTarget/100);
   const profitProgress=profitTargetAmt>0?Math.min(100,Math.max(0,(currentPnl/profitTargetAmt)*100)):0;
@@ -5054,7 +5063,7 @@ function getAcctStats(acct){
   return{
     linked,currentPnl,currentBalance,
     profitTargetAmt,profitProgress,
-    maxDDAmt,dailyDDAmt,effectiveMaxDD,lockedTotalRange,
+    maxDDAmt,maxDDTotal,dailyDDAmt,
     drawdownUsed:finalDrawdownUsed,
     currentFloor:currentFloorFinal,
     trailingLocked:finalTrailingLocked,
@@ -5200,7 +5209,7 @@ function renderAccounts(){
           </span>
           <span style="color:${s.maxDDUsedPct>80?'var(--loss)':s.trailingLocked?'var(--win)':ddColor}">
             ${s.trailingLocked
-              ? `${fmtMoney(s.drawdownUsed)} used · ${fmtMoney(s.maxDDRemaining)} left`
+              ? `${fmtMoney(s.maxDDRemaining)} remaining of ${fmtMoney(s.maxDDTotal)}`
               : `${s.maxDDUsedPct.toFixed(1)}% · ${fmtMoney(s.drawdownUsed)} / ${fmtMoney(s.maxDDAmt)}`}
           </span>
         </div>
